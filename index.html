@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 통합 취합기</title>
+  <title>고속 초간편 PDF 병합기</title>
+  <!-- 브라우저용 pdf-lib 라이브러리 직접 불러오기 -->
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <style>
     body {
       font-family: 'Malgun Gothic', sans-serif;
@@ -29,23 +31,20 @@
       font-weight: bold;
     }
     button:hover { background-color: #0051bb; }
-    #status { margin-top: 15px; color: #666; font-size: 14px; }
+    #status { margin-top: 15px; color: #666; font-size: 14px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <h2>📄 PDF 파일 하나로 합치기</h2>
-  <p>여러 개의 PDF 파일을 아래에 첨부해 주세요.</p>
+  <h2>⚡ 초고속 PDF 파일 하나로 합치기</h2>
+  <p>여러 개의 PDF 파일을 첨부해 주세요. (서버 전송 없이 내 컴퓨터에서 즉시 합쳐집니다)</p>
   
   <input type="file" id="pdfFiles" accept="application/pdf" multiple />
-  <button onclick="uploadAndMerge()">PDF 병합 후 다운로드</button>
+  <button onclick="mergePDFsLocally()">PDF 병합 후 다운로드</button>
   <div id="status"></div>
 
   <script>
-    // 내 컴퓨터 백엔드 주소 (추후 인터넷 배포 주소로 교체)
-    const BACKEND_URL = "https://pdf-backend-c0oz.onrender.com";
-
-    async function uploadAndMerge() {
+    async function mergePDFsLocally() {
       const fileInput = document.getElementById('pdfFiles');
       const statusDiv = document.getElementById('status');
       const files = fileInput.files;
@@ -55,34 +54,40 @@
         return;
       }
 
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append('pdfFiles', files[i]);
-      }
-
-      statusDiv.innerText = 'PDF 병합 작업 중... 잠시만 기다려주세요.';
+      statusDiv.innerText = '⚡ 초고속 병합 작업 중...';
+      statusDiv.style.color = '#0070f3';
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/merge`, {
-          method: 'POST',
-          body: formData
-        });
+        // 새 PDF 문서 생성
+        const mergedPdf = await PDFLib.PDFDocument.create();
 
-        if (!response.ok) throw new Error('병합 실패');
+        // 선택한 파일을 순서대로 읽어서 브라우저 내부 메모리에서 합치기
+        for (let i = 0; i < files.length; i++) {
+          const fileBytes = await files[i].arrayBuffer();
+          const pdf = await PDFLib.PDFDocument.load(fileBytes);
+          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+        }
 
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
+        // 완성된 PDF 바이너리 생성
+        const mergedPdfBytes = await mergedPdf.save();
+
+        // 다운로드 실행
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
         a.download = '최종_취합본.pdf';
         document.body.appendChild(a);
         a.click();
         a.remove();
-        
-        statusDiv.innerText = '✅ 다운로드가 완료되었습니다!';
+
+        statusDiv.innerText = '✅ 1초 만에 병합 완료!';
+        statusDiv.style.color = '#2e7d32';
       } catch (err) {
         console.error(err);
-        statusDiv.innerText = '❌ 오류가 발생했습니다. 다시 시도해 주세요.';
+        statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다. (보안 걸린 PDF인지 확인해보세요)';
+        statusDiv.style.color = '#d32f2f';
       }
     }
   </script>
