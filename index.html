@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF & 이미지 통합 병합기</title>
+  <title>안심 초고속 PDF & 이미지 통합 병합기</title>
   <!-- 브라우저용 pdf-lib 라이브러리 -->
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <style>
     body {
       font-family: 'Malgun Gothic', sans-serif;
-      max-width: 620px;
+      max-width: 640px;
       margin: 40px auto;
       padding: 30px;
       border: 1px solid #e0e0e0;
@@ -18,8 +18,30 @@
       background-color: #fcfcfc;
     }
     h2 { color: #222; text-align: center; margin-bottom: 8px; }
-    p.sub { color: #666; text-align: center; font-size: 14px; margin-bottom: 25px; }
+    p.sub { color: #666; text-align: center; font-size: 14px; margin-bottom: 20px; }
     
+    /* 보안 배너 박스 */
+    .security-banner {
+      background-color: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 22px;
+      color: #1b5e20;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .security-banner strong {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 4px;
+      color: #2e7d32;
+    }
+    .security-banner ul {
+      margin: 6px 0 0 0;
+      padding-left: 18px;
+    }
+
     /* 파일 선택 버튼 박스 */
     .file-select-box {
       border: 2px dashed #2196f3;
@@ -68,7 +90,7 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      max-width: 320px;
+      max-width: 330px;
     }
     .badge {
       background: #2196f3;
@@ -78,7 +100,7 @@
       padding: 3px 8px;
       border-radius: 12px;
     }
-    .badge-img { background: #ff9800; } /* 이미지 파일은 주황색 뱃지 */
+    .badge-img { background: #ff9800; }
 
     /* 버튼 그룹 */
     .btn-group { display: flex; gap: 4px; }
@@ -112,10 +134,20 @@
 </head>
 <body>
 
-  <h2>📄 PDF & 이미지 통합 병합기</h2>
-  <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 함께 올려 원하는 순서대로 합쳐보세요.</p>
+  <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
+  <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 하나로 합치세요.</p>
 
-  <!-- 파일 선택 영역 (PDF 및 모든 주요 이미지 지원) -->
+  <!-- 보안 및 안전성 안내 박스 -->
+  <div class="security-banner">
+    <strong>🔒 개인정보 및 문서 보안 100% 보장 (안심 사용 안내)</strong>
+    본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
+    <ul>
+      <li><strong>외부 서버 전송 Zero:</strong> 모든 병합 작업이 내 컴퓨터(브라우저) 내부 메모리에서만 처리됩니다.</li>
+      <li><strong>개인정보 유출 방지:</strong> 주민등록번호, 보안 문서 등 민감한 파일도 유출 우려 없이 오프라인 환경처럼 안전하게 이용 가능합니다.</li>
+    </ul>
+  </div>
+
+  <!-- 파일 선택 영역 -->
   <div class="file-select-box" onclick="document.getElementById('fileInput').click()">
     📂 <strong>클릭하여 PDF 또는 이미지(JPG, PNG) 선택</strong>
     <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
@@ -193,7 +225,6 @@
       renderFileList();
     }
 
-    // 드래그 앤 드롭 순서 변경
     let dragSrcIndex = null;
     function handleDragStart(e) {
       dragSrcIndex = Number(this.dataset.index);
@@ -217,7 +248,6 @@
     }
     function handleDragEnd() { this.classList.remove('dragging'); }
 
-    // 이미지 파일 ➔ PNG 바이너리로 변환 (모든 이미지 호환성 보장)
     async function convertImageToPngBytes(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -244,7 +274,6 @@
       });
     }
 
-    // 최종 통합 병합 함수
     async function mergeFiles() {
       const statusDiv = document.getElementById('status');
 
@@ -253,7 +282,7 @@
         return;
       }
 
-      statusDiv.innerText = '⚡ PDF 및 이미지 병합 작업 중...';
+      statusDiv.innerText = '⚡ PDF 및 이미지 안전 병합 작업 중...';
       statusDiv.style.color = '#0070f3';
 
       try {
@@ -263,21 +292,17 @@
           const file = fileList[i];
 
           if (file.type === 'application/pdf') {
-            // PDF 파일인 경우
             const fileBytes = await file.arrayBuffer();
             const pdf = await PDFLib.PDFDocument.load(fileBytes);
             const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
             copiedPages.forEach((page) => mergedPdf.addPage(page));
           } else if (file.type.startsWith('image/')) {
-            // 이미지 파일인 경우 (JPG, PNG, WEBP 등)
             const pngBytes = await convertImageToPngBytes(file);
             const embeddedImage = await mergedPdf.embedPng(pngBytes);
             
-            // 이미지용 A4 표준 사이즈 페이지 생성 (595.28 x 841.89 pt)
             const page = mergedPdf.addPage([595.28, 841.89]);
             const { width, height } = page.getSize();
 
-            // 이미지 비율에 맞게 리사이징하여 가운데 정렬
             const imgDims = embeddedImage.scaleToFit(width - 40, height - 40);
             page.drawImage(embeddedImage, {
               x: (width - imgDims.width) / 2,
@@ -290,7 +315,6 @@
 
         const mergedPdfBytes = await mergedPdf.save();
 
-        // 다운로드 실행
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -300,11 +324,11 @@
         a.click();
         a.remove();
 
-        statusDiv.innerText = '✅ 모든 파일이 하나로 병합되어 다운로드되었습니다!';
+        statusDiv.innerText = '✅ 모든 파일이 안전하게 병합되어 다운로드되었습니다!';
         statusDiv.style.color = '#2e7d32';
       } catch (err) {
         console.error(err);
-        statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다. (보안 걸린 PDF나 손상된 이미지인지 확인해 보세요)';
+        statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
         statusDiv.style.color = '#d32f2f';
       }
     }
