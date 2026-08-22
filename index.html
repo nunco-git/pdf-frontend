@@ -18,23 +18,23 @@
       min-height: 100vh;
     }
 
-    /* 전체 레이아웃 (1600px로 대폭 확장) */
+    /* 3분할 Grid 레이아웃: 메인 영역을 무조건 정중앙에 고정 */
     .app-container {
-      display: flex;
+      display: grid;
+      grid-template-columns: 220px 1fr 220px;
       gap: 30px;
-      max-width: 1600px;
+      max-width: 1400px;
       width: 100%;
       margin: 0 auto;
-      align-items: flex-start;
+      align-items: start;
     }
 
-    /* 사이드바 너비 220px */
+    /* 사이드바 너비 고정 */
     .sidebar {
       width: 220px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      flex-shrink: 0;
     }
 
     /* 사이드 배너 카드 */
@@ -89,10 +89,11 @@
     }
     .banner-card a:hover { background-color: #e2e8f0; }
 
-    /* 중앙 메인 병합기 영역 (760px로 시원하게 확대) */
+    /* 중앙 메인 병합기 (정중앙 배치 보장) */
     .main-content {
-      flex: 1;
-      max-width: 760px;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
       background: white;
       border: 1px solid #e2e8f0;
       border-radius: 16px;
@@ -149,7 +150,7 @@
       border: 1px solid #e2e8f0;
       border-radius: 8px;
     }
-    .file-info { display: flex; align-items: center; gap: 10px; font-size: 13px; max-width: 450px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .file-info { display: flex; align-items: center; gap: 10px; font-size: 13px; max-width: 420px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 11px; padding: 3px 8px; border-radius: 10px; }
     .badge-img { background: #f59e0b; }
 
@@ -209,10 +210,10 @@
     .btn-save { background: #2563eb; color: white; }
     .btn-close { background: #e2e8f0; color: #334155; }
 
-    /* 반응형: 모바일/좁은 화면 대처 */
-    @media (max-width: 1200px) {
-      .app-container { flex-direction: column; align-items: center; }
-      .sidebar { width: 100%; max-width: 760px; display: grid; grid-template-columns: repeat(2, 1fr); }
+    /* 반응형: 화면이 좁아지면 모바일용 레이아웃으로 변경 */
+    @media (max-width: 1100px) {
+      .app-container { display: flex; flex-direction: column; align-items: center; }
+      .sidebar { width: 100%; max-width: 720px; display: grid; grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -228,7 +229,7 @@
       <div class="banner-card" id="card-4"></div>
     </div>
 
-    <!-- 메인 병합기 영역 -->
+    <!-- 메인 병합기 영역 (화면 정중앙 고정) -->
     <div class="main-content">
       <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
       <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
