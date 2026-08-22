@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF 통합 취합기</title>
+  <style>
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      max-width: 500px;
+      margin: 80px auto;
+      padding: 30px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    h2 { color: #333; margin-bottom: 20px; }
+    input[type="file"] { margin: 20px 0; width: 100%; }
+    button {
+      background-color: #0070f3;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: bold;
+    }
+    button:hover { background-color: #0051bb; }
+    #status { margin-top: 15px; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <h2>📄 PDF 파일 하나로 합치기</h2>
+  <p>여러 개의 PDF 파일을 아래에 첨부해 주세요.</p>
+  
+  <input type="file" id="pdfFiles" accept="application/pdf" multiple />
+  <button onclick="uploadAndMerge()">PDF 병합 후 다운로드</button>
+  <div id="status"></div>
+
+  <script>
+    // 내 컴퓨터 백엔드 주소 (추후 인터넷 배포 주소로 교체)
+    const BACKEND_URL = "https://pdf-backend-c0oz.onrender.com";
+
+    async function uploadAndMerge() {
+      const fileInput = document.getElementById('pdfFiles');
+      const statusDiv = document.getElementById('status');
+      const files = fileInput.files;
+
+      if (files.length === 0) {
+        alert('병합할 PDF 파일을 1개 이상 선택해 주세요.');
+        return;
+      }
+
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('pdfFiles', files[i]);
+      }
+
+      statusDiv.innerText = 'PDF 병합 작업 중... 잠시만 기다려주세요.';
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/merge`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('병합 실패');
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = '최종_취합본.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        
+        statusDiv.innerText = '✅ 다운로드가 완료되었습니다!';
+      } catch (err) {
+        console.error(err);
+        statusDiv.innerText = '❌ 오류가 발생했습니다. 다시 시도해 주세요.';
+      }
+    }
+  </script>
+
+</body>
+</html>
