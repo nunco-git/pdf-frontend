@@ -3,65 +3,138 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>안심 초고속 PDF & 이미지 통합 병합기</title>
-  <!-- 브라우저용 pdf-lib 라이브러리 -->
+  <title>안심 PDF & 이미지 통합 병합기</title>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: 'Malgun Gothic', sans-serif;
-      max-width: 640px;
-      margin: 40px auto;
-      padding: 30px;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      background-color: #fcfcfc;
-    }
-    h2 { color: #222; text-align: center; margin-bottom: 8px; }
-    p.sub { color: #666; text-align: center; font-size: 14px; margin-bottom: 20px; }
-    
-    /* 보안 배너 박스 */
-    .security-banner {
-      background-color: #e8f5e9;
-      border: 1px solid #a5d6a7;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 22px;
-      color: #1b5e20;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .security-banner strong {
-      font-size: 14px;
-      display: block;
-      margin-bottom: 4px;
-      color: #2e7d32;
-    }
-    .security-banner ul {
-      margin: 6px 0 0 0;
-      padding-left: 18px;
+      margin: 0;
+      padding: 30px 15px;
+      background-color: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
     }
 
-    /* 파일 선택 버튼 박스 */
+    /* 전체 레이아웃 (좌측 4개 / 메인 병합기 / 우측 4개) */
+    .app-container {
+      display: flex;
+      gap: 24px;
+      max-width: 1380px;
+      width: 100%;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    /* 사이드바 (좌/우 너비 200px 확보) */
+    .sidebar {
+      width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px; /* 카드 사이 간격 조절로 답답함 해소 */
+      flex-shrink: 0;
+    }
+
+    /* 사이드 배너 카드 (네이버/구글 사이드바 스타일) */
+    .banner-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .banner-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .banner-card img {
+      width: 100%;
+      height: 160px; /* 160x600 비율에 잘 어울리는 높이 */
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background-color: #f8fafc;
+    }
+    .banner-card h4 {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #1e293b;
+      word-break: keep-all;
+    }
+    .banner-card p {
+      font-size: 11px;
+      color: #64748b;
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+      word-break: keep-all;
+    }
+    .banner-card a {
+      display: inline-block;
+      width: 100%;
+      padding: 6px 0;
+      background-color: #f1f5f9;
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 5px;
+      transition: background 0.2s;
+    }
+    .banner-card a:hover { background-color: #e2e8f0; }
+
+    /* 중앙 메인 병합기 영역 */
+    .main-content {
+      flex: 1;
+      max-width: 580px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 8px; font-size: 20px; }
+    p.sub { color: #64748b; text-align: center; font-size: 13px; margin-bottom: 20px; }
+    
+    .security-banner {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      color: #166534;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .security-banner strong { font-size: 12px; display: block; margin-bottom: 4px; color: #15803d; }
+    .security-banner ul { margin: 4px 0 0 0; padding-left: 16px; }
+
     .file-select-box {
-      border: 2px dashed #2196f3;
+      border: 2px dashed #3b82f6;
       border-radius: 8px;
       padding: 20px;
       text-align: center;
-      background-color: #e3f2fd;
+      background-color: #eff6ff;
       cursor: pointer;
       margin-bottom: 20px;
+      font-size: 13px;
     }
-    .file-select-box:hover { background-color: #bbdefb; }
+    .file-select-box:hover { background-color: #dbeafe; }
     input[type="file"] { display: none; }
 
-    /* 파일 목록 창 */
     .file-list-container {
-      border: 1px solid #ddd;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      background: white;
+      background: #fafafa;
       min-height: 120px;
-      max-height: 320px;
+      max-height: 280px;
       overflow-y: auto;
       padding: 10px;
       margin-bottom: 20px;
@@ -70,98 +143,263 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 6px;
-      cursor: grab;
-      user-select: none;
-    }
-    .file-item:hover { background: #edf2f7; }
-    .file-item.dragging { opacity: 0.5; background: #d0ebff; }
-
-    .file-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      color: #333;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      max-width: 330px;
-    }
-    .badge {
-      background: #2196f3;
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
-      padding: 3px 8px;
-      border-radius: 12px;
-    }
-    .badge-img { background: #ff9800; }
-
-    /* 버튼 그룹 */
-    .btn-group { display: flex; gap: 4px; }
-    .btn-sm {
-      border: 1px solid #ccc;
+      padding: 8px 10px;
+      margin-bottom: 6px;
       background: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
     }
-    .btn-sm:hover { background: #eee; }
-    .btn-del { color: #d32f2f; border-color: #ffcdd2; }
-    .btn-del:hover { background: #ffebee; }
+    .file-info { display: flex; align-items: center; gap: 8px; font-size: 12px; max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 10px; }
+    .badge-img { background: #f59e0b; }
+
+    .btn-group { display: flex; gap: 4px; }
+    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .btn-del { color: #ef4444; border-color: #fca5a5; }
 
     .btn-main {
-      background-color: #0070f3;
+      background-color: #2563eb;
       color: white;
       border: none;
-      padding: 15px;
-      font-size: 16px;
+      padding: 13px;
+      font-size: 15px;
       border-radius: 8px;
       cursor: pointer;
       width: 100%;
       font-weight: bold;
     }
-    .btn-main:hover { background-color: #0051bb; }
-    #status { margin-top: 15px; text-align: center; font-size: 14px; font-weight: bold; }
-    .empty-msg { color: #aaa; text-align: center; margin-top: 40px; font-size: 14px; }
+    .btn-main:hover { background-color: #1d4ed8; }
+    #status { margin-top: 15px; text-align: center; font-size: 12px; font-weight: bold; }
+    .empty-msg { color: #94a3b8; text-align: center; margin-top: 40px; font-size: 12px; }
+
+    /* 하단 편집 버튼 */
+    .admin-bar { text-align: center; margin-top: 20px; }
+    .btn-admin { background: none; border: none; color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer; }
+
+    /* 편집 모달 창 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      width: 440px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal-content h3 { margin-top: 0; font-size: 16px; }
+    .input-group { margin-bottom: 12px; text-align: left; }
+    .input-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #334155; }
+    .input-group input, .input-group textarea, .input-group select {
+      width: 100%;
+      padding: 8px;
+      font-size: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+    }
+    .modal-btns { display: flex; gap: 8px; margin-top: 20px; }
+    .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .btn-save { background: #2563eb; color: white; }
+    .btn-close { background: #e2e8f0; color: #334155; }
+
+    /* 반응형: 모바일/좁은 화면 대처 */
+    @media (max-width: 1100px) {
+      .app-container { flex-direction: column; align-items: center; }
+      .sidebar { width: 100%; max-width: 580px; display: grid; grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
 
-  <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
-  <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 하나로 합치세요.</p>
+  <div class="app-container">
+    
+    <!-- 좌측 배너 영역 (1~4번) -->
+    <div class="sidebar">
+      <div class="banner-card" id="card-1"></div>
+      <div class="banner-card" id="card-2"></div>
+      <div class="banner-card" id="card-3"></div>
+      <div class="banner-card" id="card-4"></div>
+    </div>
 
-  <!-- 보안 및 안전성 안내 박스 -->
-  <div class="security-banner">
-    <strong>🔒 개인정보 및 문서 보안 100% 보장 (안심 사용 안내)</strong>
-    본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
-    <ul>
-      <li><strong>외부 서버 전송 Zero:</strong> 모든 병합 작업이 내 컴퓨터(브라우저) 내부 메모리에서만 처리됩니다.</li>
-      <li><strong>개인정보 유출 방지:</strong> 주민등록번호, 보안 문서 등 민감한 파일도 유출 우려 없이 오프라인 환경처럼 안전하게 이용 가능합니다.</li>
-    </ul>
+    <!-- 메인 병합기 영역 -->
+    <div class="main-content">
+      <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
+      <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
+
+      <div class="security-banner">
+        <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+        본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
+        <ul>
+          <li><strong>외부 서버 전송 Zero:</strong> 모든 작업이 브라우저 메모리에서 처리됩니다.</li>
+          <li><strong>개인정보 유출 방지:</strong> 오프라인 환경처럼 안전하게 이용할 수 있습니다.</li>
+        </ul>
+      </div>
+
+      <div class="file-select-box" onclick="document.getElementById('fileInput').click()">
+        📂 <strong>클릭하여 PDF 또는 이미지(JPG, PNG) 선택</strong>
+        <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
+      </div>
+
+      <div class="file-list-container" id="fileListContainer">
+        <div class="empty-msg">선택된 파일이 없습니다.</div>
+      </div>
+
+      <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
+      <div id="status"></div>
+
+      <!-- 하단 편집 모드 버튼 -->
+      <div class="admin-bar">
+        <button class="btn-admin" onclick="openAdminModal()">⚙️ 사이드 배너/링크 편집하기</button>
+      </div>
+    </div>
+
+    <!-- 우측 배너 영역 (5~8번) -->
+    <div class="sidebar">
+      <div class="banner-card" id="card-5"></div>
+      <div class="banner-card" id="card-6"></div>
+      <div class="banner-card" id="card-7"></div>
+      <div class="banner-card" id="card-8"></div>
+    </div>
+
   </div>
 
-  <!-- 파일 선택 영역 -->
-  <div class="file-select-box" onclick="document.getElementById('fileInput').click()">
-    📂 <strong>클릭하여 PDF 또는 이미지(JPG, PNG) 선택</strong>
-    <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
-  </div>
+  <!-- 배너 편집 팝업 모달창 -->
+  <div class="modal" id="adminModal">
+    <div class="modal-content">
+      <h3>⚙️ 사이드 배너 수시 편집 (총 8개)</h3>
+      
+      <div class="input-group">
+        <label>편집할 카드 위치 선택</label>
+        <select id="editCardSelect" onchange="loadCardDataToForm()">
+          <option value="1">좌측 1번 카드 (상단)</option>
+          <option value="2">좌측 2번 카드</option>
+          <option value="3">좌측 3번 카드</option>
+          <option value="4">좌측 4번 카드 (하단)</option>
+          <option value="5">우측 5번 카드 (상단)</option>
+          <option value="6">우측 6번 카드</option>
+          <option value="7">우측 7번 카드</option>
+          <option value="8">우측 8번 카드 (하단)</option>
+        </select>
+      </div>
 
-  <!-- 파일 목록 창 -->
-  <div class="file-list-container" id="fileListContainer">
-    <div class="empty-msg">선택된 파일이 없습니다.</div>
-  </div>
+      <div class="input-group">
+        <label>제목</label>
+        <input type="text" id="editTitle" placeholder="예: 주요 공지사항" />
+      </div>
 
-  <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
-  <div id="status"></div>
+      <div class="input-group">
+        <label>설명 문구</label>
+        <textarea id="editDesc" rows="2" placeholder="예: 관련 링크를 클릭하세요."></textarea>
+      </div>
+
+      <div class="input-group">
+        <label>이미지 URL (추천 규격: 160×600 px 비율)</label>
+        <input type="text" id="editImgUrl" placeholder="https://example.com/banner.png" />
+      </div>
+
+      <div class="input-group">
+        <label>이동할 링크 (URL)</label>
+        <input type="text" id="editLinkUrl" placeholder="https://example.com" />
+      </div>
+
+      <div class="input-group">
+        <label>링크 버튼 이름</label>
+        <input type="text" id="editBtnText" placeholder="예: 바로가기" />
+      </div>
+
+      <div class="modal-btns">
+        <button class="btn-save" onclick="saveCardData()">저장하기</button>
+        <button class="btn-close" onclick="closeAdminModal()">닫기</button>
+      </div>
+    </div>
+  </div>
 
   <script>
+    // 기본 8개 배너 데이터 초기화
+    const defaultCards = {};
+    for (let i = 1; i <= 8; i++) {
+      defaultCards[i] = {
+        title: `알림 배너 ${i}`,
+        desc: `클릭하면 해당 링크로 바로 연결됩니다.`,
+        img: "",
+        link: "#",
+        btnText: "자세히 보기"
+      };
+    }
+
+    function getCardData() {
+      const saved = localStorage.getItem('pdf_app_banners_8');
+      return saved ? JSON.parse(saved) : defaultCards;
+    }
+
+    function renderBanners() {
+      const cards = getCardData();
+      for (let i = 1; i <= 8; i++) {
+        const cardEl = document.getElementById(`card-${i}`);
+        if (!cardEl) continue;
+        const data = cards[i] || defaultCards[i];
+        
+        const imgTag = data.img ? `<img src="${data.img}" alt="banner" />` : '';
+        cardEl.innerHTML = `
+          ${imgTag}
+          <h4>${data.title}</h4>
+          <p>${data.desc}</p>
+          <a href="${data.link}" target="_blank">${data.btnText}</a>
+        `;
+      }
+    }
+
+    function openAdminModal() {
+      const pw = prompt("편집 권한 비밀번호를 입력하세요. (기본: 1234)");
+      if (pw === "1234") {
+        document.getElementById('adminModal').style.display = 'flex';
+        loadCardDataToForm();
+      } else if (pw !== null) {
+        alert("비밀번호가 올바르지 않습니다.");
+      }
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').style.display = 'none';
+    }
+
+    function loadCardDataToForm() {
+      const id = document.getElementById('editCardSelect').value;
+      const cards = getCardData();
+      const data = cards[id] || defaultCards[id];
+
+      document.getElementById('editTitle').value = data.title;
+      document.getElementById('editDesc').value = data.desc;
+      document.getElementById('editImgUrl').value = data.img;
+      document.getElementById('editLinkUrl').value = data.link;
+      document.getElementById('editBtnText').value = data.btnText;
+    }
+
+    function saveCardData() {
+      const id = document.getElementById('editCardSelect').value;
+      const cards = getCardData();
+
+      cards[id] = {
+        title: document.getElementById('editTitle').value,
+        desc: document.getElementById('editDesc').value,
+        img: document.getElementById('editImgUrl').value,
+        link: document.getElementById('editLinkUrl').value,
+        btnText: document.getElementById('editBtnText').value
+      };
+
+      localStorage.setItem('pdf_app_banners_8', JSON.stringify(cards));
+      renderBanners();
+      alert(`${id}번 배너 카드가 저장되었습니다!`);
+    }
+
+    // --- PDF 병합 핵심 로직 ---
     let fileList = [];
 
     function handleFileSelect(event) {
@@ -174,39 +412,25 @@
     function renderFileList() {
       const container = document.getElementById('fileListContainer');
       container.innerHTML = '';
-
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
         return;
       }
-
       fileList.forEach((file, index) => {
         const item = document.createElement('div');
         item.className = 'file-item';
-        item.draggable = true;
-        item.dataset.index = index;
-
         const isImage = file.type.startsWith('image/');
-        const badgeClass = isImage ? 'badge badge-img' : 'badge';
-        const typeText = isImage ? '이미지' : 'PDF';
-
         item.innerHTML = `
           <div class="file-info">
-            <span class="${badgeClass}">${index + 1} (${typeText})</span>
+            <span class="${isImage ? 'badge badge-img' : 'badge'}">${index + 1} (${isImage ? '이미지' : 'PDF'})</span>
             <span title="${file.name}">${file.name}</span>
           </div>
           <div class="btn-group">
-            <button class="btn-sm" onclick="moveItem(${index}, -1)">▲ 위로</button>
-            <button class="btn-sm" onclick="moveItem(${index}, 1)">▼ 아래로</button>
-            <button class="btn-sm btn-del" onclick="removeItem(${index})">✕ 삭제</button>
+            <button class="btn-sm" onclick="moveItem(${index}, -1)">▲</button>
+            <button class="btn-sm" onclick="moveItem(${index}, 1)">▼</button>
+            <button class="btn-sm btn-del" onclick="removeItem(${index})">✕</button>
           </div>
         `;
-
-        item.addEventListener('dragstart', handleDragStart);
-        item.addEventListener('dragover', handleDragOver);
-        item.addEventListener('drop', handleDrop);
-        item.addEventListener('dragend', handleDragEnd);
-
         container.appendChild(item);
       });
     }
@@ -225,72 +449,38 @@
       renderFileList();
     }
 
-    let dragSrcIndex = null;
-    function handleDragStart(e) {
-      dragSrcIndex = Number(this.dataset.index);
-      this.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    }
-    function handleDragOver(e) {
-      if (e.preventDefault) e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      return false;
-    }
-    function handleDrop(e) {
-      e.stopPropagation();
-      const dropTargetIndex = Number(this.dataset.index);
-      if (dragSrcIndex !== null && dragSrcIndex !== dropTargetIndex) {
-        const movedItem = fileList.splice(dragSrcIndex, 1)[0];
-        fileList.splice(dropTargetIndex, 0, movedItem);
-        renderFileList();
-      }
-      return false;
-    }
-    function handleDragEnd() { this.classList.remove('dragging'); }
-
     async function convertImageToPngBytes(file) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = img.width; canvas.height = img.height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
             canvas.toBlob((blob) => {
               const blobReader = new FileReader();
               blobReader.onloadend = () => resolve(blobReader.result);
-              blobReader.onerror = reject;
               blobReader.readAsArrayBuffer(blob);
             }, 'image/png');
           };
-          img.onerror = reject;
           img.src = e.target.result;
         };
-        reader.onerror = reject;
         reader.readAsDataURL(file);
       });
     }
 
     async function mergeFiles() {
       const statusDiv = document.getElementById('status');
-
-      if (fileList.length === 0) {
-        alert('병합할 파일(PDF 또는 이미지)을 1개 이상 선택해 주세요.');
-        return;
-      }
-
-      statusDiv.innerText = '⚡ PDF 및 이미지 안전 병합 작업 중...';
-      statusDiv.style.color = '#0070f3';
+      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
+      statusDiv.innerText = '⚡ 안전하게 병합 작업 중...';
+      statusDiv.style.color = '#2563eb';
 
       try {
         const mergedPdf = await PDFLib.PDFDocument.create();
-
         for (let i = 0; i < fileList.length; i++) {
           const file = fileList[i];
-
           if (file.type === 'application/pdf') {
             const fileBytes = await file.arrayBuffer();
             const pdf = await PDFLib.PDFDocument.load(fileBytes);
@@ -299,10 +489,8 @@
           } else if (file.type.startsWith('image/')) {
             const pngBytes = await convertImageToPngBytes(file);
             const embeddedImage = await mergedPdf.embedPng(pngBytes);
-            
             const page = mergedPdf.addPage([595.28, 841.89]);
             const { width, height } = page.getSize();
-
             const imgDims = embeddedImage.scaleToFit(width - 40, height - 40);
             page.drawImage(embeddedImage, {
               x: (width - imgDims.width) / 2,
@@ -312,26 +500,23 @@
             });
           }
         }
-
         const mergedPdfBytes = await mergedPdf.save();
-
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
         a.download = '통합_최종취합본.pdf';
-        document.body.appendChild(a);
         a.click();
-        a.remove();
-
-        statusDiv.innerText = '✅ 모든 파일이 안전하게 병합되어 다운로드되었습니다!';
-        statusDiv.style.color = '#2e7d32';
+        statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
+        statusDiv.style.color = '#166534';
       } catch (err) {
         console.error(err);
         statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#d32f2f';
+        statusDiv.style.color = '#ef4444';
       }
     }
+
+    renderBanners();
   </script>
 
 </body>
