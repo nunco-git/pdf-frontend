@@ -2,521 +2,158 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>안심 PDF & 이미지 통합 병합기</title>
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <title>PDF 통합 편집 & 병합 도구</title>
+  
+  <!-- pdf-lib 핵심 라이브러리 -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- 파일 다운로드를 돕는 라이브러리 -->
+  <script src="https://unpkg.com/downloadjs@1.4.7/download.min.js"></script>
+  <!-- ⭐️ PDF 암호화 처리를 위한 추가 라이브러리 -->
+  <script src="https://unpkg.com/@pdf-lib/upng@1.0.1/dist/UPNG.js"></script>
+  
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Malgun Gothic', sans-serif;
-      margin: 0;
-      padding: 40px 20px;
-      background-color: #f4f6f8;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
+    body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #eef2f5; }
+    .card { background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #333; margin-top: 0; }
+    .option-group { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+    input[type="file"] { width: 100%; padding: 5px; margin-bottom: 10px; }
+    input[type="text"], input[type="password"], select { 
+      width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; 
     }
-
-    /* 3분할 Grid 레이아웃: 메인 영역을 무조건 정중앙에 고정 */
-    .app-container {
-      display: grid;
-      grid-template-columns: 220px 1fr 220px;
-      gap: 30px;
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
-      align-items: start;
-    }
-
-    /* 사이드바 너비 고정 */
-    .sidebar {
-      width: 220px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    /* 사이드 배너 카드 */
-    .banner-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .banner-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    }
-    .banner-card img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      background-color: #f8fafc;
-    }
-    .banner-card h4 {
-      margin: 6px 0 4px 0;
-      font-size: 14px;
-      color: #1e293b;
-      word-break: keep-all;
-    }
-    .banner-card p {
-      font-size: 12px;
-      color: #64748b;
-      margin: 0 0 10px 0;
-      line-height: 1.4;
-      word-break: keep-all;
-    }
-    .banner-card a {
-      display: inline-block;
-      width: 100%;
-      padding: 8px 0;
-      background-color: #f1f5f9;
-      color: #2563eb;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: bold;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .banner-card a:hover { background-color: #e2e8f0; }
-
-    /* 중앙 메인 병합기 (정중앙 배치 보장) */
-    .main-content {
-      width: 100%;
-      max-width: 720px;
-      margin: 0 auto;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 36px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.05);
-    }
-
-    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 10px; font-size: 24px; }
-    p.sub { color: #64748b; text-align: center; font-size: 14px; margin-bottom: 24px; }
-    
-    .security-banner {
-      background-color: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 24px;
-      color: #166534;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .security-banner strong { font-size: 14px; display: block; margin-bottom: 6px; color: #15803d; }
-    .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
-
-    .file-select-box {
-      border: 2px dashed #3b82f6;
-      border-radius: 12px;
-      padding: 28px;
-      text-align: center;
-      background-color: #eff6ff;
-      cursor: pointer;
-      margin-bottom: 24px;
-      font-size: 15px;
-    }
-    .file-select-box:hover { background-color: #dbeafe; }
-    input[type="file"] { display: none; }
-
-    .file-list-container {
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #fafafa;
-      min-height: 140px;
-      max-height: 320px;
-      overflow-y: auto;
-      padding: 12px;
-      margin-bottom: 24px;
-    }
-    .file-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      margin-bottom: 8px;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-    }
-    .file-info { display: flex; align-items: center; gap: 10px; font-size: 13px; max-width: 420px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 11px; padding: 3px 8px; border-radius: 10px; }
-    .badge-img { background: #f59e0b; }
-
-    .btn-group { display: flex; gap: 6px; }
-    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-    .btn-del { color: #ef4444; border-color: #fca5a5; }
-
-    .btn-main {
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      padding: 16px;
-      font-size: 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      width: 100%;
-      font-weight: bold;
-    }
-    .btn-main:hover { background-color: #1d4ed8; }
-    #status { margin-top: 18px; text-align: center; font-size: 14px; font-weight: bold; }
-    .empty-msg { color: #94a3b8; text-align: center; margin-top: 50px; font-size: 13px; }
-
-    /* 하단 편집 버튼 */
-    .admin-bar { text-align: center; margin-top: 24px; }
-    .btn-admin { background: none; border: none; color: #94a3b8; font-size: 12px; text-decoration: underline; cursor: pointer; }
-
-    /* 편집 모달 창 */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: white;
-      padding: 28px;
-      border-radius: 14px;
-      width: 480px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    .modal-content h3 { margin-top: 0; font-size: 18px; }
-    .input-group { margin-bottom: 14px; text-align: left; }
-    .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #334155; }
-    .input-group input, .input-group textarea, .input-group select {
-      width: 100%;
-      padding: 10px;
-      font-size: 13px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-    }
-    .modal-btns { display: flex; gap: 10px; margin-top: 24px; }
-    .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
-    .btn-save { background: #2563eb; color: white; }
-    .btn-close { background: #e2e8f0; color: #334155; }
-
-    /* 반응형: 화면이 좁아지면 모바일용 레이아웃으로 변경 */
-    @media (max-width: 1100px) {
-      .app-container { display: flex; flex-direction: column; align-items: center; }
-      .sidebar { width: 100%; max-width: 720px; display: grid; grid-template-columns: repeat(2, 1fr); }
-    }
+    .info-text { font-size: 12px; color: #888; margin-top: 5px; display: block; }
+    button { background: #0056b3; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 18px; font-weight: bold; transition: 0.3s; }
+    button:hover { background: #004494; }
   </style>
 </head>
 <body>
 
-  <div class="app-container">
-    
-    <!-- 좌측 배너 영역 (1~4번) -->
-    <div class="sidebar">
-      <div class="banner-card" id="card-1"></div>
-      <div class="banner-card" id="card-2"></div>
-      <div class="banner-card" id="card-3"></div>
-      <div class="banner-card" id="card-4"></div>
-    </div>
-
-    <!-- 메인 병합기 영역 (화면 정중앙 고정) -->
-    <div class="main-content">
-      <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
-      <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
-
-      <div class="security-banner">
-        <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
-        본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
-        <ul>
-          <li><strong>외부 서버 전송 Zero:</strong> 모든 작업이 브라우저 메모리에서 처리됩니다.</li>
-          <li><strong>개인정보 유출 방지:</strong> 오프라인 환경처럼 안전하게 이용할 수 있습니다.</li>
-        </ul>
-      </div>
-
-      <div class="file-select-box" onclick="document.getElementById('fileInput').click()">
-        📂 <strong>클릭하여 PDF 또는 이미지(JPG, PNG) 선택</strong>
-        <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
-      </div>
-
-      <div class="file-list-container" id="fileListContainer">
-        <div class="empty-msg">선택된 파일이 없습니다.</div>
-      </div>
-
-      <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
-      <div id="status"></div>
-
-      <!-- 하단 편집 모드 버튼 -->
-      <div class="admin-bar">
-        <button class="btn-admin" onclick="openAdminModal()">⚙️ 사이드 배너/링크 편집하기</button>
-      </div>
-    </div>
-
-    <!-- 우측 배너 영역 (5~8번) -->
-    <div class="sidebar">
-      <div class="banner-card" id="card-5"></div>
-      <div class="banner-card" id="card-6"></div>
-      <div class="banner-card" id="card-7"></div>
-      <div class="banner-card" id="card-8"></div>
-    </div>
-
+<div class="card">
+  <h2>📄 PDF 병합 & 편집 도구</h2>
+  
+  <!-- 1. 파일 선택 -->
+  <div class="option-group">
+    <label>1. 병합할 PDF 파일 선택 (여러 개 가능)</label>
+    <input type="file" id="pdfFiles" accept="application/pdf" multiple>
+    <span class="info-text">※ 여러 파일을 선택하면 선택된 순서대로 병합됩니다.</span>
   </div>
 
-  <!-- 배너 편집 팝업 모달창 -->
-  <div class="modal" id="adminModal">
-    <div class="modal-content">
-      <h3>⚙️ 사이드 배너 수시 편집 (총 8개)</h3>
-      
-      <div class="input-group">
-        <label>편집할 카드 위치 선택</label>
-        <select id="editCardSelect" onchange="loadCardDataToForm()">
-          <option value="1">좌측 1번 카드 (상단)</option>
-          <option value="2">좌측 2번 카드</option>
-          <option value="3">좌측 3번 카드</option>
-          <option value="4">좌측 4번 카드 (하단)</option>
-          <option value="5">우측 5번 카드 (상단)</option>
-          <option value="6">우측 6번 카드</option>
-          <option value="7">우측 7번 카드</option>
-          <option value="8">우측 8번 카드 (하단)</option>
-        </select>
-      </div>
-
-      <div class="input-group">
-        <label>제목</label>
-        <input type="text" id="editTitle" placeholder="예: 주요 공지사항" />
-      </div>
-
-      <div class="input-group">
-        <label>설명 문구</label>
-        <textarea id="editDesc" rows="2" placeholder="예: 관련 링크를 클릭하세요."></textarea>
-      </div>
-
-      <div class="input-group">
-        <label>이미지 URL (추천 규격: 160×600 px 비율)</label>
-        <input type="text" id="editImgUrl" placeholder="https://example.com/banner.png" />
-      </div>
-
-      <div class="input-group">
-        <label>이동할 링크 (URL)</label>
-        <input type="text" id="editLinkUrl" placeholder="https://example.com" />
-      </div>
-
-      <div class="input-group">
-        <label>링크 버튼 이름</label>
-        <input type="text" id="editBtnText" placeholder="예: 바로가기" />
-      </div>
-
-      <div class="modal-btns">
-        <button class="btn-save" onclick="saveCardData()">저장하기</button>
-        <button class="btn-close" onclick="closeAdminModal()">닫기</button>
-      </div>
-    </div>
+  <!-- 2. 페이지 추출 -->
+  <div class="option-group">
+    <label>2. 특정 페이지만 추출 (선택사항)</label>
+    <input type="text" id="pageRange" placeholder="예: 1, 3-5 (비워두면 전체 병합)">
+    <span class="info-text">※ 쉼표(,)와 하이픈(-)을 사용해 원하는 페이지만 골라냅니다.</span>
   </div>
 
-  <script>
-    const defaultCards = {};
-    for (let i = 1; i <= 8; i++) {
-      defaultCards[i] = {
-        title: `알림 배너 ${i}`,
-        desc: `클릭하면 해당 링크로 바로 연결됩니다.`,
-        img: "",
-        link: "#",
-        btnText: "자세히 보기"
-      };
+  <!-- 3. 회전 -->
+  <div class="option-group">
+    <label>3. 페이지 일괄 회전</label>
+    <select id="rotationAngle">
+      <option value="0">원본 방향 유지</option>
+      <option value="90">시계 방향 90도 회전</option>
+      <option value="180">180도 회전 (뒤집기)</option>
+      <option value="270">시계 반대 방향 90도 회전</option>
+    </select>
+  </div>
+
+  <!-- 4. 암호 설정 -->
+  <div class="option-group">
+    <label>4. 문서 열기 비밀번호 (선택사항)</label>
+    <input type="password" id="pdfPassword" placeholder="비밀번호 미설정 시 비워두세요">
+    <span class="info-text">※ 설정 시, 파일을 열 때 이 비밀번호를 입력해야 합니다.</span>
+  </div>
+
+  <button onclick="processAndMergePDFs()" id="processBtn">작업 시작 및 다운로드</button>
+</div>
+
+<script>
+  const { PDFDocument, degrees } = PDFLib;
+
+  async function processAndMergePDFs() {
+    const fileInput = document.getElementById('pdfFiles');
+    const pageRangeInput = document.getElementById('pageRange').value.trim();
+    const rotation = parseInt(document.getElementById('rotationAngle').value);
+    const password = document.getElementById('pdfPassword').value;
+    const btn = document.getElementById('processBtn');
+
+    if (fileInput.files.length === 0) {
+      alert("최소 1개 이상의 PDF 파일을 선택해 주세요.");
+      return;
     }
 
-    function getCardData() {
-      const saved = localStorage.getItem('pdf_app_banners_8');
-      return saved ? JSON.parse(saved) : defaultCards;
-    }
+    try {
+      btn.innerText = "처리 중... 잠시만 기다려주세요";
+      btn.disabled = true;
+      btn.style.background = "#999";
 
-    function renderBanners() {
-      const cards = getCardData();
-      for (let i = 1; i <= 8; i++) {
-        const cardEl = document.getElementById(`card-${i}`);
-        if (!cardEl) continue;
-        const data = cards[i] || defaultCards[i];
+      // 새 문서 생성
+      const mergedPdf = await PDFDocument.create();
+
+      // 파일 순회하며 병합
+      for (let file of fileInput.files) {
+        const fileBuffer = await file.arrayBuffer();
+        const pdf = await PDFDocument.load(fileBuffer);
+        const totalPages = pdf.getPageCount();
+
+        let pagesToCopy = [];
         
-        const imgTag = data.img ? `<img src="${data.img}" alt="banner" />` : '';
-        cardEl.innerHTML = `
-          ${imgTag}
-          <h4>${data.title}</h4>
-          <p>${data.desc}</p>
-          <a href="${data.link}" target="_blank">${data.btnText}</a>
-        `;
-      }
-    }
-
-    function openAdminModal() {
-      const pw = prompt("편집 권한 비밀번호를 입력하세요. (기본: 1234)");
-      if (pw === "1234") {
-        document.getElementById('adminModal').style.display = 'flex';
-        loadCardDataToForm();
-      } else if (pw !== null) {
-        alert("비밀번호가 올바르지 않습니다.");
-      }
-    }
-
-    function closeAdminModal() {
-      document.getElementById('adminModal').style.display = 'none';
-    }
-
-    function loadCardDataToForm() {
-      const id = document.getElementById('editCardSelect').value;
-      const cards = getCardData();
-      const data = cards[id] || defaultCards[id];
-
-      document.getElementById('editTitle').value = data.title;
-      document.getElementById('editDesc').value = data.desc;
-      document.getElementById('editImgUrl').value = data.img;
-      document.getElementById('editLinkUrl').value = data.link;
-      document.getElementById('editBtnText').value = data.btnText;
-    }
-
-    function saveCardData() {
-      const id = document.getElementById('editCardSelect').value;
-      const cards = getCardData();
-
-      cards[id] = {
-        title: document.getElementById('editTitle').value,
-        desc: document.getElementById('editDesc').value,
-        img: document.getElementById('editImgUrl').value,
-        link: document.getElementById('editLinkUrl').value,
-        btnText: document.getElementById('editBtnText').value
-      };
-
-      localStorage.setItem('pdf_app_banners_8', JSON.stringify(cards));
-      renderBanners();
-      alert(`${id}번 배너 카드가 저장되었습니다!`);
-    }
-
-    let fileList = [];
-
-    function handleFileSelect(event) {
-      const selectedFiles = Array.from(event.target.files);
-      selectedFiles.forEach(file => fileList.push(file));
-      event.target.value = '';
-      renderFileList();
-    }
-
-    function renderFileList() {
-      const container = document.getElementById('fileListContainer');
-      container.innerHTML = '';
-      if (fileList.length === 0) {
-        container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
-        return;
-      }
-      fileList.forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = 'file-item';
-        const isImage = file.type.startsWith('image/');
-        item.innerHTML = `
-          <div class="file-info">
-            <span class="${isImage ? 'badge badge-img' : 'badge'}">${index + 1} (${isImage ? '이미지' : 'PDF'})</span>
-            <span title="${file.name}">${file.name}</span>
-          </div>
-          <div class="btn-group">
-            <button class="btn-sm" onclick="moveItem(${index}, -1)">▲</button>
-            <button class="btn-sm" onclick="moveItem(${index}, 1)">▼</button>
-            <button class="btn-sm btn-del" onclick="removeItem(${index})">✕</button>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    function moveItem(index, direction) {
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= fileList.length) return;
-      const temp = fileList[index];
-      fileList[index] = fileList[targetIndex];
-      fileList[targetIndex] = temp;
-      renderFileList();
-    }
-
-    function removeItem(index) {
-      fileList.splice(index, 1);
-      renderFileList();
-    }
-
-    async function convertImageToPngBytes(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            canvas.toBlob((blob) => {
-              const blobReader = new FileReader();
-              blobReader.onloadend = () => resolve(blobReader.result);
-              blobReader.readAsArrayBuffer(blob);
-            }, 'image/png');
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function mergeFiles() {
-      const statusDiv = document.getElementById('status');
-      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-      statusDiv.innerText = '⚡ 안전하게 병합 작업 중...';
-      statusDiv.style.color = '#2563eb';
-
-      try {
-        const mergedPdf = await PDFLib.PDFDocument.create();
-        for (let i = 0; i < fileList.length; i++) {
-          const file = fileList[i];
-          if (file.type === 'application/pdf') {
-            const fileBytes = await file.arrayBuffer();
-            const pdf = await PDFLib.PDFDocument.load(fileBytes);
-            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-            copiedPages.forEach((page) => mergedPdf.addPage(page));
-          } else if (file.type.startsWith('image/')) {
-            const pngBytes = await convertImageToPngBytes(file);
-            const embeddedImage = await mergedPdf.embedPng(pngBytes);
-            const page = mergedPdf.addPage([595.28, 841.89]);
-            const { width, height } = page.getSize();
-            const imgDims = embeddedImage.scaleToFit(width - 40, height - 40);
-            page.drawImage(embeddedImage, {
-              x: (width - imgDims.width) / 2,
-              y: (height - imgDims.height) / 2,
-              width: imgDims.width,
-              height: imgDims.height,
-            });
-          }
+        // 페이지 범위 파싱
+        if (pageRangeInput) {
+          const parts = pageRangeInput.split(',');
+          parts.forEach(part => {
+            if (part.includes('-')) {
+              const [start, end] = part.split('-').map(num => parseInt(num.trim()) - 1);
+              for (let i = start; i <= end; i++) {
+                if (i >= 0 && i < totalPages) pagesToCopy.push(i);
+              }
+            } else {
+              const pageIdx = parseInt(part.trim()) - 1;
+              if (pageIdx >= 0 && pageIdx < totalPages) pagesToCopy.push(pageIdx);
+            }
+          });
+        } else {
+          pagesToCopy = Array.from({ length: totalPages }, (_, i) => i);
         }
-        const mergedPdfBytes = await mergedPdf.save();
-        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-        const downloadUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = '통합_최종취합본.pdf';
-        a.click();
-        statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
-        statusDiv.style.color = '#166534';
-      } catch (err) {
-        console.error(err);
-        statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#ef4444';
-      }
-    }
 
-    renderBanners();
-  </script>
+        const copiedPages = await mergedPdf.copyPages(pdf, pagesToCopy);
+
+        // 회전 적용 및 삽입
+        copiedPages.forEach(page => {
+          if (rotation !== 0) {
+            page.setRotation(degrees(page.getRotation().angle + rotation));
+          }
+          mergedPdf.addPage(page);
+        });
+      }
+
+      // 암호화 옵션 설정
+      let saveOptions = {};
+      if (password) {
+        saveOptions = {
+          useObjectStreams: false,
+          userPassword: password,   // 열기 비밀번호
+          ownerPassword: password,  // 편집 권한 비밀번호 (동일하게 설정)
+        };
+      }
+
+      // PDF 저장 (암호화가 있다면 적용)
+      const pdfBytes = await mergedPdf.save(saveOptions);
+
+      // 다운로드
+      download(pdfBytes, "merged_result.pdf", "application/pdf");
+      alert("작업이 완료되었습니다!");
+
+    } catch (err) {
+      console.error(err);
+      alert("PDF 처리 중 오류가 발생했습니다. 원본 파일이 손상되었거나 암호가 걸려있을 수 있습니다.");
+    } finally {
+      // 버튼 상태 복구
+      btn.innerText = "작업 시작 및 다운로드";
+      btn.disabled = false;
+      btn.style.background = "#0056b3";
+    }
+  }
+</script>
 
 </body>
 </html>
