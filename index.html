@@ -245,26 +245,6 @@
     }
     .preview-placeholder { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.4; }
 
-    .security-opt-box {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 15px;
-    }
-    .security-opt-box label { font-size: 13px; font-weight: bold; color: #334155; white-space: nowrap; }
-    .security-opt-box input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-
     .btn-main {
       background-color: #2563eb;
       color: white;
@@ -358,11 +338,6 @@
             <div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>
           </div>
         </div>
-      </div>
-
-      <div class="security-opt-box">
-        <label>🔐 문서 열기 비밀번호 설정 (선택)</label>
-        <input type="password" id="pdfPasswordInput" placeholder="설정 시 열기 비밀번호 적용" />
       </div>
 
       <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
@@ -802,12 +777,10 @@
       });
     }
 
-    // 4. PDF 병합 및 비밀번호 암호화 로직
+    // 4. PDF 병합 로직 (비밀번호 기능 제거됨)
     async function mergeFiles() {
       const statusDiv = document.getElementById('status');
       if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-
-      const pdfPassword = document.getElementById('pdfPasswordInput').value.trim();
 
       statusDiv.innerText = '⚡ 안전하게 병합 작업 중...';
       statusDiv.style.color = '#2563eb';
@@ -871,29 +844,7 @@
           }
         }
 
-        // 1차 병합 파일 바이트 생성
-        let finalPdfBytes = await mergedPdf.save();
-
-        // 2차 암호화 처리 (비밀번호가 입력된 경우)
-        if (pdfPassword !== "") {
-          statusDiv.innerText = '🔐 비밀번호 암호화 적용 중...';
-          try {
-            // pdf-lib 문서 객체를 다시 로드하여 암호화 옵션 적용 후 암호화 저장
-            const encryptablePdf = await PDFLib.PDFDocument.load(finalPdfBytes);
-            finalPdfBytes = await encryptablePdf.save({
-              userPassword: pdfPassword,
-              ownerPassword: pdfPassword,
-              permissions: {
-                printing: 'highResolution',
-                modifying: false,
-                copying: false,
-                annotating: false,
-              }
-            });
-          } catch (e) {
-            console.warn("기본 암호화 모듈 적용 불가, 대체 암호 처리 진행:", e);
-          }
-        }
+        const finalPdfBytes = await mergedPdf.save();
 
         const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
@@ -902,9 +853,7 @@
         a.download = '통합_최종취합본.pdf';
         a.click();
 
-        statusDiv.innerText = pdfPassword !== "" 
-          ? '✅ 비밀번호가 적용된 PDF 파일이 다운로드되었습니다!' 
-          : '✅ 모든 파일이 성공적으로 병합되었습니다!';
+        statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
         statusDiv.style.color = '#166534';
       } catch (err) {
         console.error("병합 중 오류 발생:", err);
