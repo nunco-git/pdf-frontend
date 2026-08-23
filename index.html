@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>안심 PDF & 이미지 통합 병합기</title>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <!-- PDF 미리보기를 위한 pdf.js 추가 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  </script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -18,113 +23,97 @@
       min-height: 100vh;
     }
 
-    /* 3분할 Grid 레이아웃 */
     .app-container {
       display: grid;
-      grid-template-columns: 220px 1fr 220px;
-      gap: 30px;
-      max-width: 1400px;
+      grid-template-columns: 200px 1fr 200px;
+      gap: 20px;
+      max-width: 1500px;
       width: 100%;
       margin: 0 auto;
       align-items: start;
     }
 
     .sidebar {
-      width: 220px;
+      width: 200px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
 
-    /* 사이드 배너 카드 */
     .banner-card {
       background: white;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.03);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .banner-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
     }
     .banner-card img {
       width: 100%;
-      height: 150px;
+      height: 130px;
       object-fit: cover;
       border-radius: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       background-color: #f8fafc;
     }
-    .banner-card h4 {
-      margin: 6px 0 4px 0;
-      font-size: 14px;
-      color: #1e293b;
-      word-break: keep-all;
-    }
-    .banner-card p {
-      font-size: 12px;
-      color: #64748b;
-      margin: 0 0 10px 0;
-      line-height: 1.4;
-      word-break: keep-all;
-    }
+    .banner-card h4 { margin: 4px 0; font-size: 13px; color: #1e293b; }
+    .banner-card p { font-size: 11px; color: #64748b; margin: 0 0 8px 0; line-height: 1.3; }
     .banner-card a {
       display: inline-block;
       width: 100%;
-      padding: 8px 0;
+      padding: 6px 0;
       background-color: #f1f5f9;
       color: #2563eb;
       text-decoration: none;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       border-radius: 6px;
-      transition: background 0.2s;
     }
-    .banner-card a:hover { background-color: #e2e8f0; }
 
-    /* 중앙 메인 영역 */
+    /* 메인 콘텐츠 영역: 작업 영역 + 미리보기 영역 분할 */
     .main-content {
       width: 100%;
-      max-width: 760px;
-      margin: 0 auto;
       background: white;
       border: 1px solid #e2e8f0;
       border-radius: 16px;
-      padding: 36px;
+      padding: 28px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     }
 
-    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 10px; font-size: 24px; }
-    p.sub { color: #64748b; text-align: center; font-size: 14px; margin-bottom: 24px; }
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 8px; font-size: 22px; }
+    p.sub { color: #64748b; text-align: center; font-size: 13px; margin-bottom: 20px; }
     
     .security-banner {
       background-color: #f0fdf4;
       border: 1px solid #bbf7d0;
       border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 24px;
+      padding: 12px 16px;
       color: #166534;
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 12px;
+      line-height: 1.5;
     }
-    .security-banner strong { font-size: 14px; display: block; margin-bottom: 6px; color: #15803d; }
-    .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
+    .security-banner strong { font-size: 13px; display: block; margin-bottom: 4px; color: #15803d; }
+    .security-banner ul { margin: 4px 0 0 0; padding-left: 18px; }
 
     .file-select-box {
       border: 2px dashed #3b82f6;
       border-radius: 12px;
-      padding: 24px;
+      padding: 20px;
       text-align: center;
       background-color: #eff6ff;
       cursor: pointer;
-      margin-bottom: 20px;
-      font-size: 15px;
+      margin-top: 16px;
+      font-size: 14px;
     }
     .file-select-box:hover { background-color: #dbeafe; }
     input[type="file"] { display: none; }
@@ -133,97 +122,123 @@
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #fafafa;
-      min-height: 140px;
-      max-height: 380px;
+      height: 320px;
       overflow-y: auto;
-      padding: 12px;
-      margin-bottom: 20px;
+      padding: 10px;
     }
     
-    /* 파일 항목 레이아웃 */
     .file-item {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
+      gap: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
       background: white;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
     }
-    .file-main-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .file-info { display: flex; align-items: center; gap: 10px; font-size: 13px; max-width: 450px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: bold; }
-    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+    .file-item:hover { border-color: #93c5fd; }
+    .file-item.selected { border: 2px solid #2563eb; background-color: #f0f9ff; }
+
+    .file-main-row { display: flex; align-items: center; justify-content: space-between; }
+    .file-info { display: flex; align-items: center; gap: 8px; font-size: 12px; max-width: 280px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: bold; }
+    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 8px; }
     .badge-img { background: #f59e0b; }
 
-    /* 개별 파일 옵션 설정 영역 */
     .file-opt-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       padding-top: 6px;
-      border-top: 1px dashed #f1f5f9;
-      font-size: 12px;
+      border-top: 1px dashed #e2e8f0;
+      font-size: 11px;
     }
-    .opt-field { display: flex; align-items: center; gap: 6px; flex: 1; }
+    .opt-field { display: flex; align-items: center; gap: 4px; flex: 1; }
     .opt-field label { color: #64748b; white-space: nowrap; font-weight: bold; }
     .opt-field input, .opt-field select {
-      padding: 5px 8px;
+      padding: 4px 6px;
       border: 1px solid #cbd5e1;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       width: 100%;
     }
 
-    .btn-group { display: flex; gap: 6px; }
-    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+    .btn-group { display: flex; gap: 4px; }
+    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
-    /* 하단 비밀번호 옵션 */
+    /* 미리보기 패널 디자인 */
+    .preview-panel {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 320px;
+    }
+    .preview-title { font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
+    .preview-box {
+      width: 100%;
+      height: 100%;
+      background: #e2e8f0;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .preview-box img, .preview-box canvas {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      transition: transform 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .preview-placeholder { font-size: 12px; color: #94a3b8; text-align: center; }
+
     .security-opt-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 20px;
+      padding: 12px 16px;
+      margin: 16px 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
+      gap: 12px;
     }
-    .security-opt-box label { font-size: 13px; font-weight: bold; color: #334155; white-space: nowrap; }
+    .security-opt-box label { font-size: 12px; font-weight: bold; color: #334155; white-space: nowrap; }
     .security-opt-box input {
       flex: 1;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .btn-main {
       background-color: #2563eb;
       color: white;
       border: none;
-      padding: 16px;
-      font-size: 16px;
+      padding: 14px;
+      font-size: 15px;
       border-radius: 10px;
       cursor: pointer;
       width: 100%;
       font-weight: bold;
     }
     .btn-main:hover { background-color: #1d4ed8; }
-    #status { margin-top: 18px; text-align: center; font-size: 14px; font-weight: bold; }
-    .empty-msg { color: #94a3b8; text-align: center; margin-top: 40px; font-size: 13px; }
+    #status { margin-top: 14px; text-align: center; font-size: 13px; font-weight: bold; }
+    .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 12px; }
 
-    /* 하단 편집 버튼 */
-    .admin-bar { text-align: center; margin-top: 24px; }
-    .btn-admin { background: none; border: none; color: #94a3b8; font-size: 12px; text-decoration: underline; cursor: pointer; }
+    .admin-bar { text-align: center; margin-top: 16px; }
+    .btn-admin { background: none; border: none; color: #94a3b8; font-size: 11px; text-decoration: underline; cursor: pointer; }
 
-    /* 편집 모달 창 */
     .modal {
       display: none;
       position: fixed;
@@ -235,30 +250,31 @@
     }
     .modal-content {
       background: white;
-      padding: 28px;
+      padding: 24px;
       border-radius: 14px;
-      width: 480px;
+      width: 440px;
       max-height: 85vh;
       overflow-y: auto;
     }
-    .modal-content h3 { margin-top: 0; font-size: 18px; }
-    .input-group { margin-bottom: 14px; text-align: left; }
-    .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #334155; }
+    .modal-content h3 { margin-top: 0; font-size: 16px; }
+    .input-group { margin-bottom: 12px; text-align: left; }
+    .input-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #334155; }
     .input-group input, .input-group textarea, .input-group select {
       width: 100%;
-      padding: 10px;
-      font-size: 13px;
+      padding: 8px;
+      font-size: 12px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
     }
-    .modal-btns { display: flex; gap: 10px; margin-top: 24px; }
-    .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 20px; }
+    .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
     .btn-save { background: #2563eb; color: white; }
     .btn-close { background: #e2e8f0; color: #334155; }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
-      .sidebar { width: 100%; max-width: 760px; display: grid; grid-template-columns: repeat(2, 1fr); }
+      .sidebar { width: 100%; max-width: 800px; display: grid; grid-template-columns: repeat(2, 1fr); }
+      .editor-layout { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -274,7 +290,7 @@
       <div class="banner-card" id="card-4"></div>
     </div>
 
-    <!-- 메인 병합기 영역 -->
+    <!-- 메인 영역 -->
     <div class="main-content">
       <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
       <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
@@ -293,11 +309,21 @@
         <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
       </div>
 
-      <div class="file-list-container" id="fileListContainer">
-        <div class="empty-msg">선택된 파일이 없습니다.</div>
+      <!-- 편집 레이아웃 (목록 + 미리보기) -->
+      <div class="editor-layout">
+        <div class="file-list-container" id="fileListContainer">
+          <div class="empty-msg">선택된 파일이 없습니다.</div>
+        </div>
+
+        <div class="preview-panel">
+          <div class="preview-title">🔍 실시간 회전 미리보기</div>
+          <div class="preview-box" id="previewBox">
+            <div class="preview-placeholder">목록에서 파일을 클릭하면<br>미리보기가 표시됩니다.</div>
+          </div>
+        </div>
       </div>
 
-      <!-- 하단 비밀번호 설정 -->
+      <!-- 비밀번호 옵션 -->
       <div class="security-opt-box">
         <label>🔐 문서 열기 비밀번호 설정 (선택)</label>
         <input type="password" id="pdfPasswordInput" placeholder="설정 시 열기 비밀번호 적용 (미설정 시 공란)" />
@@ -306,7 +332,6 @@
       <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
       <div id="status"></div>
 
-      <!-- 하단 편집 모드 버튼 -->
       <div class="admin-bar">
         <button class="btn-admin" onclick="openAdminModal()">⚙️ 사이드 배너/링크 편집하기</button>
       </div>
@@ -352,7 +377,7 @@
       </div>
 
       <div class="input-group">
-        <label>이미지 URL (추천 규격: 160×600 px 비율)</label>
+        <label>이미지 URL</label>
         <input type="text" id="editImgUrl" placeholder="https://example.com/banner.png" />
       </div>
 
@@ -451,6 +476,7 @@
     }
 
     let fileList = [];
+    let selectedIndex = null;
 
     function handleFileSelect(event) {
       const selectedFiles = Array.from(event.target.files);
@@ -463,6 +489,9 @@
       });
       event.target.value = '';
       renderFileList();
+      if (selectedIndex === null && fileList.length > 0) {
+        selectItem(0);
+      }
     }
 
     function renderFileList() {
@@ -470,6 +499,7 @@
       container.innerHTML = '';
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
+        showPreview(null);
         return;
       }
 
@@ -478,7 +508,13 @@
         const isImage = file.type.startsWith('image/');
 
         const itemEl = document.createElement('div');
-        itemEl.className = 'file-item';
+        itemEl.className = `file-item ${selectedIndex === index ? 'selected' : ''}`;
+        itemEl.onclick = (e) => {
+          if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('select')) {
+            selectItem(index);
+          }
+        };
+
         itemEl.innerHTML = `
           <div class="file-main-row">
             <div class="file-info">
@@ -486,25 +522,25 @@
               <span title="${file.name}">${file.name}</span>
             </div>
             <div class="btn-group">
-              <button class="btn-sm" onclick="moveItem(${index}, -1)">▲</button>
-              <button class="btn-sm" onclick="moveItem(${index}, 1)">▼</button>
-              <button class="btn-sm btn-del" onclick="removeItem(${index})">✕</button>
+              <button class="btn-sm" onclick="moveItem(${index}, -1, event)">▲</button>
+              <button class="btn-sm" onclick="moveItem(${index}, 1, event)">▼</button>
+              <button class="btn-sm btn-del" onclick="removeItem(${index}, event)">✕</button>
             </div>
           </div>
           <div class="file-opt-row">
             ${!isImage ? `
               <div class="opt-field">
-                <label>추출 페이지:</label>
-                <input type="text" placeholder="예: 1-3, 5 (전체는 공란)" value="${itemData.pageRange}" onchange="updateItemOption(${index}, 'pageRange', this.value)" />
+                <label>추출:</label>
+                <input type="text" placeholder="예: 1-3 (전체는 공란)" value="${itemData.pageRange}" onchange="updateItemOption(${index}, 'pageRange', this.value)" />
               </div>
-            ` : '<div class="opt-field"><span style="color:#94a3b8;">이미지는 전체 포함</span></div>'}
-            <div class="opt-field" style="max-width: 180px;">
+            ` : '<div class="opt-field"><span style="color:#94a3b8;">이미지 전체</span></div>'}
+            <div class="opt-field" style="max-width: 140px;">
               <label>회전:</label>
               <select onchange="updateItemOption(${index}, 'rotation', parseInt(this.value))">
-                <option value="0" ${itemData.rotation === 0 ? 'selected' : ''}>0도 (원본)</option>
-                <option value="90" ${itemData.rotation === 90 ? 'selected' : ''}>90도 회전</option>
-                <option value="180" ${itemData.rotation === 180 ? 'selected' : ''}>180도 회전</option>
-                <option value="270" ${itemData.rotation === 270 ? 'selected' : ''}>270도 회전</option>
+                <option value="0" ${itemData.rotation === 0 ? 'selected' : ''}>0도</option>
+                <option value="90" ${itemData.rotation === 90 ? 'selected' : ''}>90도</option>
+                <option value="180" ${itemData.rotation === 180 ? 'selected' : ''}>180도</option>
+                <option value="270" ${itemData.rotation === 270 ? 'selected' : ''}>270도</option>
               </select>
             </div>
           </div>
@@ -513,24 +549,92 @@
       });
     }
 
+    function selectItem(index) {
+      selectedIndex = index;
+      renderFileList();
+      showPreview(fileList[index]);
+    }
+
     function updateItemOption(index, key, value) {
       if (fileList[index]) {
         fileList[index][key] = value;
+        if (key === 'rotation' && selectedIndex === index) {
+          applyPreviewRotation(value);
+        }
       }
     }
 
-    function moveItem(index, direction) {
+    function moveItem(index, direction, e) {
+      if (e) e.stopPropagation();
       const targetIndex = index + direction;
       if (targetIndex < 0 || targetIndex >= fileList.length) return;
       const temp = fileList[index];
       fileList[index] = fileList[targetIndex];
       fileList[targetIndex] = temp;
+      if (selectedIndex === index) selectedIndex = targetIndex;
+      else if (selectedIndex === targetIndex) selectedIndex = index;
       renderFileList();
     }
 
-    function removeItem(index) {
+    function removeItem(index, e) {
+      if (e) e.stopPropagation();
       fileList.splice(index, 1);
+      if (selectedIndex === index) {
+        selectedIndex = fileList.length > 0 ? Math.min(index, fileList.length - 1) : null;
+      } else if (selectedIndex > index) {
+        selectedIndex--;
+      }
       renderFileList();
+      if (selectedIndex !== null) showPreview(fileList[selectedIndex]);
+      else showPreview(null);
+    }
+
+    /* 실시간 미리보기 렌더링 */
+    async function showPreview(itemData) {
+      const previewBox = document.getElementById('previewBox');
+      previewBox.innerHTML = '';
+
+      if (!itemData) {
+        previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을 클릭하면<br>미리보기가 표시됩니다.</div>';
+        return;
+      }
+
+      const file = itemData.file;
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.createElement('img');
+          img.id = 'previewElement';
+          img.src = e.target.result;
+          img.style.transform = `rotate(${itemData.rotation}deg)`;
+          previewBox.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      } else if (file.type === 'application/pdf') {
+        const fileBytes = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: fileBytes });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+
+        const viewport = page.getViewport({ scale: 0.5 });
+        const canvas = document.createElement('canvas');
+        canvas.id = 'previewElement';
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvas.style.transform = `rotate(${itemData.rotation}deg)`;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        previewBox.appendChild(canvas);
+      }
+    }
+
+    function applyPreviewRotation(deg) {
+      const el = document.getElementById('previewElement');
+      if (el) {
+        el.style.transform = `rotate(${deg}deg)`;
+      }
     }
 
     async function convertImageToPngBytes(file) {
