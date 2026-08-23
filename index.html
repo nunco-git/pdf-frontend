@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>안심 PDF & 이미지 통합 병합기</title>
+  
+  <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-  <!-- PDF 미리보기를 위한 pdf.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
 
-  <!-- Firebase SDK 라이브러리 추가 -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -28,7 +29,6 @@
       min-height: 100vh;
     }
 
-    /* 3분할 Grid 레이아웃 */
     .app-container {
       display: grid;
       grid-template-columns: 220px 1fr 220px;
@@ -46,7 +46,6 @@
       gap: 20px;
     }
 
-    /* 사이드 배너 카드 */
     .banner-card {
       background: white;
       border: 1px solid #e2e8f0;
@@ -98,7 +97,6 @@
     }
     .banner-card a:hover { background-color: #e2e8f0; }
 
-    /* 중앙 메인 콘텐츠 */
     .main-content {
       width: 100%;
       max-width: 720px;
@@ -126,7 +124,6 @@
     .security-banner strong { font-size: 14px; display: block; margin-bottom: 6px; color: #15803d; }
     .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
 
-    /* 파일 선택 및 드래그 앤 드롭 영역 */
     .file-select-box {
       border: 2px dashed #3b82f6;
       border-radius: 12px;
@@ -144,7 +141,6 @@
     }
     input[type="file"] { display: none; }
 
-    /* 목록과 미리보기 레이아웃 */
     .editor-layout {
       display: grid;
       grid-template-columns: 1fr 220px;
@@ -161,7 +157,6 @@
       padding: 10px;
     }
     
-    /* 파일 목록 항목 */
     .file-item {
       display: flex;
       flex-direction: column;
@@ -217,7 +212,6 @@
     .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
-    /* 미리보기 창 */
     .preview-panel {
       border: 1px solid #e2e8f0;
       border-radius: 10px;
@@ -249,7 +243,6 @@
     }
     .preview-placeholder { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.4; }
 
-    /* 비밀번호 설정 영역 */
     .security-opt-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
@@ -285,7 +278,6 @@
     #status { margin-top: 18px; text-align: center; font-size: 14px; font-weight: bold; }
     .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 13px; }
 
-    /* 편집 모달 창 */
     .modal {
       display: none;
       position: fixed;
@@ -325,11 +317,11 @@
     }
   </style>
 </head>
-<body>
+<!-- 개발자 도구 및 마우스 우클릭 방지 추가 -->
+<body oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
 
   <div class="app-container">
     
-    <!-- 좌측 배너 영역 (1~4번) -->
     <div class="sidebar">
       <div class="banner-card" id="card-1"></div>
       <div class="banner-card" id="card-2"></div>
@@ -337,7 +329,6 @@
       <div class="banner-card" id="card-4"></div>
     </div>
 
-    <!-- 메인 병합기 영역 -->
     <div class="main-content">
       <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
       <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
@@ -351,13 +342,11 @@
         </ul>
       </div>
 
-      <!-- 탐색기 파일 드래그 앤 드롭 박스 -->
       <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
         📂 <strong>클릭하거나 파일(PDF, 이미지)을 이곳으로 끌어다 놓으세요</strong>
         <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
       </div>
 
-      <!-- 파일 목록 + 미리보기 2열 레이아웃 -->
       <div class="editor-layout">
         <div class="file-list-container" id="fileListContainer">
           <div class="empty-msg">선택된 파일이 없습니다.</div>
@@ -371,17 +360,15 @@
         </div>
       </div>
 
-      <!-- 하단 비밀번호 설정 -->
       <div class="security-opt-box">
         <label>🔐 문서 열기 비밀번호 설정 (선택)</label>
-        <input type="password" id="pdfPasswordInput" placeholder="설정 시 열기 비밀번호 적용 (미설정 시 공란)" />
+        <input type="password" id="pdfPasswordInput" placeholder="설정 시 열기 비밀번호 적용" />
       </div>
 
       <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
       <div id="status"></div>
     </div>
 
-    <!-- 우측 배너 영역 (5~8번) -->
     <div class="sidebar">
       <div class="banner-card" id="card-5"></div>
       <div class="banner-card" id="card-6"></div>
@@ -391,7 +378,6 @@
 
   </div>
 
-  <!-- 배너 편집 팝업 모달창 -->
   <div class="modal" id="adminModal">
     <div class="modal-content">
       <h3>⚙️ 사이드 배너 수시 편집 (총 8개)</h3>
@@ -421,7 +407,7 @@
       </div>
 
       <div class="input-group">
-        <label>이미지 URL (추천 규격: 160×600 px 비율)</label>
+        <label>이미지 URL</label>
         <input type="text" id="editImgUrl" placeholder="https://example.com/banner.png" />
       </div>
 
@@ -443,7 +429,15 @@
   </div>
 
   <script>
-    // ezpdfmerger Firebase 프로젝트 설정
+    // 단축키(F12, Ctrl+Shift+I, Ctrl+U 등) 기반 개발자도구 차단
+    document.onkeydown = function (e) {
+      if (e.keyCode == 123 || 
+         (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) ||
+         (e.ctrlKey && e.keyCode == 85)) {
+        return false;
+      }
+    };
+
     const firebaseConfig = {
       apiKey: "AIzaSyB1KB8TojybTREGiKJJukmgcGgtDTbZodA",
       authDomain: "ezpdfmerger.firebaseapp.com",
@@ -454,7 +448,6 @@
       measurementId: "G-P70QSP1WSV"
     };
 
-    // Firebase DB 초기화
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -491,17 +484,14 @@
       }
     }
 
-    /* URL 파라미터 확인 후 Firebase 검증 진입 */
     window.addEventListener('DOMContentLoaded', () => {
       renderBanners();
-      
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('admin') === 'true') {
         openAdminModal();
       }
     });
 
-    /* 파이어베이스 Firestore 비밀번호 검증 함수 */
     async function openAdminModal() {
       const inputPw = prompt("편집 권한 비밀번호를 입력하세요.");
       if (!inputPw) {
@@ -565,7 +555,6 @@
     let selectedIndex = null;
     let draggedIndex = null;
 
-    /* 외부 탐색기 파일 드래그 앤 드롭 처리 */
     const dropZone = document.getElementById('dropZone');
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -704,12 +693,9 @@
     function updateItemOption(index, key, value) {
       if (fileList[index]) {
         fileList[index][key] = value;
-        
-        // 회전 변경 시 즉시 회전 적용
         if (key === 'rotation' && selectedIndex === index) {
           applyPreviewRotation(value);
         }
-        // 추출 범위 수정 시 해당 첫 페이지를 미리보기에 실시간 반영
         if (key === 'pageRange' && selectedIndex === index) {
           showPreview(fileList[index]);
         }
@@ -756,14 +742,12 @@
           const loadingTask = pdfjsLib.getDocument({ data: fileBytes });
           const pdf = await loadingTask.promise;
           
-          let pageNumToPreview = 1; // 기본은 1페이지
+          let pageNumToPreview = 1;
 
-          // 입력된 extraction range(예: "3", "2-5", "4,7")에서 첫 번째 페이지 파싱
           if (itemData.pageRange && itemData.pageRange.trim() !== '') {
             const firstPart = itemData.pageRange.split(',')[0].trim();
             const parsedNum = parseInt(firstPart.split('-')[0].trim());
             
-            // 입력 번호가 범위 내 유효값인 경우 적용
             if (!isNaN(parsedNum) && parsedNum >= 1 && parsedNum <= pdf.numPages) {
               pageNumToPreview = parsedNum;
             }
@@ -821,7 +805,7 @@
       const statusDiv = document.getElementById('status');
       if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
 
-      const pdfPassword = document.getElementById('pdfPasswordInput').value;
+      const pdfPassword = document.getElementById('pdfPasswordInput').value.trim();
 
       statusDiv.innerText = '⚡ 안전하게 병합 작업 중...';
       statusDiv.style.color = '#2563eb';
@@ -885,16 +869,24 @@
           }
         }
 
-        let saveOptions = {};
-        if (pdfPassword) {
-          saveOptions = {
-            useObjectStreams: false,
+        // 비밀번호 설정 분기 처리
+        let mergedPdfBytes;
+        if (pdfPassword !== "") {
+          // 암호화 설정이 포함된 PDF 저장
+          mergedPdf.encrypt({
             userPassword: pdfPassword,
-            ownerPassword: pdfPassword
-          };
+            ownerPassword: pdfPassword,
+            permissions: {
+              printing: 'highResolution',
+              modifying: false,
+              copying: false,
+              annotating: false
+            }
+          });
         }
+        
+        mergedPdfBytes = await mergedPdf.save();
 
-        const mergedPdfBytes = await mergedPdf.save(saveOptions);
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
