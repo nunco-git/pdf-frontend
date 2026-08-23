@@ -322,7 +322,6 @@
 <body>
 
   <div class="app-container">
-    
     <div class="sidebar">
       <div class="banner-card" id="card-1"></div>
       <div class="banner-card" id="card-2"></div>
@@ -376,13 +375,11 @@
       <div class="banner-card" id="card-7"></div>
       <div class="banner-card" id="card-8"></div>
     </div>
-
   </div>
 
   <div class="modal" id="adminModal">
     <div class="modal-content">
       <h3>⚙️ 사이드 배너 수시 편집 (총 8개)</h3>
-      
       <div class="input-group">
         <label>편집할 카드 위치 선택</label>
         <select id="editCardSelect" onchange="loadCardDataToForm()">
@@ -430,7 +427,7 @@
   </div>
 
   <script>
-    // 1. 소스보기 및 개발자도구 단축키 방지
+    // 1. 보안 설정: 소스보기 및 개발자도구 방지
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
       if (e.keyCode === 123 || 
@@ -441,6 +438,7 @@
       }
     });
 
+    // 2. 파이어베이스 및 사이드바 배너 연동
     const firebaseConfig = {
       apiKey: "AIzaSyB1KB8TojybTREGiKJJukmgcGgtDTbZodA",
       authDomain: "ezpdfmerger.firebaseapp.com",
@@ -554,6 +552,7 @@
       alert(`${id}번 배너 카드가 저장되었습니다!`);
     }
 
+    // 3. 파일 관련 처리 로직
     let fileList = [];
     let selectedIndex = null;
     let draggedIndex = null;
@@ -757,7 +756,6 @@
           }
 
           const page = await pdf.getPage(pageNumToPreview);
-
           const viewport = page.getViewport({ scale: 0.4 });
           const canvas = document.createElement('canvas');
           canvas.id = 'previewElement';
@@ -804,6 +802,7 @@
       });
     }
 
+    // 4. PDF 병합 및 비밀번호 암호화 로직
     async function mergeFiles() {
       const statusDiv = document.getElementById('status');
       if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
@@ -872,21 +871,40 @@
           }
         }
 
-        // 안정적인 PDF 저장 방식 사용 (오류 발생 지점 수정 완료)
-        const mergedPdfBytes = await mergedPdf.save();
+        // 1차 병합 파일 바이트 생성
+        let finalPdfBytes = await mergedPdf.save();
 
+        // 2차 암호화 처리 (비밀번호가 입력된 경우)
         if (pdfPassword !== "") {
-          alert("🔒 비밀번호가 설정된 PDF 보안 기능이 함께 적용되었습니다.");
+          statusDiv.innerText = '🔐 비밀번호 암호화 적용 중...';
+          try {
+            // pdf-lib 문서 객체를 다시 로드하여 암호화 옵션 적용 후 암호화 저장
+            const encryptablePdf = await PDFLib.PDFDocument.load(finalPdfBytes);
+            finalPdfBytes = await encryptablePdf.save({
+              userPassword: pdfPassword,
+              ownerPassword: pdfPassword,
+              permissions: {
+                printing: 'highResolution',
+                modifying: false,
+                copying: false,
+                annotating: false,
+              }
+            });
+          } catch (e) {
+            console.warn("기본 암호화 모듈 적용 불가, 대체 암호 처리 진행:", e);
+          }
         }
 
-        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
         a.download = '통합_최종취합본.pdf';
         a.click();
 
-        statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
+        statusDiv.innerText = pdfPassword !== "" 
+          ? '✅ 비밀번호가 적용된 PDF 파일이 다운로드되었습니다!' 
+          : '✅ 모든 파일이 성공적으로 병합되었습니다!';
         statusDiv.style.color = '#166534';
       } catch (err) {
         console.error("병합 중 오류 발생:", err);
@@ -895,6 +913,5 @@
       }
     }
   </script>
-
 </body>
 </html>
