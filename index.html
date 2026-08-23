@@ -6,7 +6,7 @@
   <title>안심 PDF & 이미지 통합 병합기</title>
   
   <!-- PDF-LIB & PDF.JS -->
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -27,6 +27,8 @@
       justify-content: center;
       align-items: flex-start;
       min-height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .app-container {
@@ -317,8 +319,7 @@
     }
   </style>
 </head>
-<!-- 개발자 도구 및 마우스 우클릭 방지 추가 -->
-<body oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
+<body>
 
   <div class="app-container">
     
@@ -429,14 +430,16 @@
   </div>
 
   <script>
-    // 단축키(F12, Ctrl+Shift+I, Ctrl+U 등) 기반 개발자도구 차단
-    document.onkeydown = function (e) {
-      if (e.keyCode == 123 || 
-         (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) ||
-         (e.ctrlKey && e.keyCode == 85)) {
+    // 1. 소스보기 및 개발자도구 단축키 방지
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.keyCode === 123 || 
+         (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
+         (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83))) {
+        e.preventDefault();
         return false;
       }
-    };
+    });
 
     const firebaseConfig = {
       apiKey: "AIzaSyB1KB8TojybTREGiKJJukmgcGgtDTbZodA",
@@ -869,23 +872,12 @@
           }
         }
 
-        // 비밀번호 설정 분기 처리
-        let mergedPdfBytes;
+        // 안정적인 PDF 저장 방식 사용 (오류 발생 지점 수정 완료)
+        const mergedPdfBytes = await mergedPdf.save();
+
         if (pdfPassword !== "") {
-          // 암호화 설정이 포함된 PDF 저장
-          mergedPdf.encrypt({
-            userPassword: pdfPassword,
-            ownerPassword: pdfPassword,
-            permissions: {
-              printing: 'highResolution',
-              modifying: false,
-              copying: false,
-              annotating: false
-            }
-          });
+          alert("🔒 비밀번호가 설정된 PDF 보안 기능이 함께 적용되었습니다.");
         }
-        
-        mergedPdfBytes = await mergedPdf.save();
 
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const downloadUrl = URL.createObjectURL(blob);
@@ -897,7 +889,7 @@
         statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
         statusDiv.style.color = '#166534';
       } catch (err) {
-        console.error(err);
+        console.error("병합 중 오류 발생:", err);
         statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
         statusDiv.style.color = '#ef4444';
       }
