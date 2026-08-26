@@ -145,25 +145,25 @@
 
     .editor-layout {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: flex-start;
       gap: 14px;
       margin-bottom: 8px;
     }
 
     .file-list-container {
-      flex: 1 1 400px;
-      min-width: 280px;
+      flex: 0 0 calc(33% - 7px);
+      min-width: 220px;
+      max-width: 80%;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #fafafa;
       height: 620px;
       min-height: 200px;
       max-height: 90vh;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: auto;
       padding: 10px;
-      resize: vertical;
+      resize: both;
     }
     
     .file-item {
@@ -222,9 +222,9 @@
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
     .preview-panel {
-      flex: 0 0 440px;
+      flex: 0 0 calc(66% - 7px);
       min-width: 260px;
-      max-width: 90vw;
+      max-width: 85%;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #f8fafc;
@@ -310,8 +310,9 @@
       .app-container { display: flex; flex-direction: column; align-items: center; }
       .sidebar { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(4, 1fr); }
       .editor-layout { flex-direction: column; }
-      .file-list-container, .preview-panel { flex-basis: auto; width: 100%; }
-      .preview-panel { height: 400px; }
+      .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; }
+      .file-list-container { height: 220px; }
+      .preview-panel { height: 440px; }
     }
     @media (max-width: 640px) {
       .sidebar { grid-template-columns: repeat(2, 1fr); }
