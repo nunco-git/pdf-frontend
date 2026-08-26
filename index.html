@@ -74,12 +74,12 @@
     }
     .banner-card h4 {
       margin: 6px 0 4px 0;
-      font-size: 14px;
+      font-size: 16px;
       color: #1e293b;
       word-break: keep-all;
     }
     .banner-card p {
-      font-size: 12px;
+      font-size: 14px;
       color: #64748b;
       margin: 0 0 10px 0;
       line-height: 1.4;
@@ -92,7 +92,7 @@
       background-color: #f1f5f9;
       color: #2563eb;
       text-decoration: none;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: bold;
       border-radius: 6px;
       transition: background 0.2s;
@@ -110,21 +110,29 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     }
 
-    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 10px; font-size: 24px; }
-    p.sub { color: #64748b; text-align: center; font-size: 14px; margin-bottom: 24px; }
+    h2 { color: #0f172a; text-align: center; margin-top: 0; margin-bottom: 10px; font-size: 26px; }
+    p.sub { color: #64748b; text-align: center; font-size: 16px; margin-bottom: 24px; }
     
     .security-banner {
       background-color: #f0fdf4;
       border: 1px solid #bbf7d0;
       border-radius: 10px;
       padding: 16px;
-      margin-bottom: 24px;
       color: #166534;
-      font-size: 13px;
+      font-size: 15px;
       line-height: 1.6;
     }
-    .security-banner strong { font-size: 14px; display: block; margin-bottom: 6px; color: #15803d; }
+    .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; }
     .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
+
+    .top-row {
+      display: flex;
+      align-items: stretch;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .top-row .security-banner { flex: 1 1 55%; margin-bottom: 0; }
+    .top-row .file-select-box { flex: 1 1 45%; margin-bottom: 0; display: flex; align-items: center; justify-content: center; }
 
     .file-select-box {
       border: 2px dashed #3b82f6;
@@ -134,7 +142,7 @@
       background-color: #eff6ff;
       cursor: pointer;
       margin-bottom: 20px;
-      font-size: 14px;
+      font-size: 16px;
       transition: background-color 0.2s, border-color 0.2s;
     }
     .file-select-box.dragover {
@@ -188,15 +196,15 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 14px;
       max-width: 230px;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
       font-weight: bold;
     }
-    .drag-handle { color: #94a3b8; margin-right: 2px; font-size: 12px; cursor: grab; }
-    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
+    .drag-handle { color: #94a3b8; margin-right: 2px; font-size: 14px; cursor: grab; }
+    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 12px; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
     .badge-img { background: #f59e0b; }
 
     .file-opt-row {
@@ -205,7 +213,7 @@
       gap: 8px;
       padding-top: 6px;
       border-top: 1px dashed #f1f5f9;
-      font-size: 11px;
+      font-size: 13px;
     }
     .opt-field { display: flex; align-items: center; gap: 4px; flex: 1; }
     .opt-field label { color: #64748b; white-space: nowrap; font-weight: bold; }
@@ -213,12 +221,12 @@
       padding: 3px 5px;
       border: 1px solid #cbd5e1;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 13px;
       width: 100%;
     }
 
     .btn-group { display: flex; gap: 4px; }
-    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
     .preview-panel {
@@ -238,7 +246,7 @@
       overflow: auto;
       resize: both;
     }
-    .preview-title { font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
+    .preview-title { font-size: 14px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
     .preview-box {
       width: 100%;
       height: 100%;
@@ -257,7 +265,7 @@
       transition: transform 0.3s ease;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    .preview-placeholder { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.4; }
+    .preview-placeholder { font-size: 13px; color: #94a3b8; text-align: center; line-height: 1.4; }
 
     /* PDF 다중 페이지 스크롤 미리보기 */
     .preview-box.pdf-scroll-mode {
@@ -290,13 +298,13 @@
       top: 6px; right: 8px;
       background: rgba(15,23,42,0.65);
       color: #fff;
-      font-size: 10px;
+      font-size: 12px;
       padding: 2px 7px;
       border-radius: 10px;
       z-index: 2;
       pointer-events: none;
     }
-    .pdf-page-loading { font-size: 11px; color: #94a3b8; }
+    .pdf-page-loading { font-size: 13px; color: #94a3b8; }
     .pdf-current-page-badge {
       position: sticky;
       top: 6px;
@@ -304,7 +312,7 @@
       margin-right: 6px;
       background: rgba(37,99,235,0.9);
       color: #fff;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: bold;
       padding: 3px 9px;
       border-radius: 10px;
@@ -317,15 +325,15 @@
       color: white;
       border: none;
       padding: 16px;
-      font-size: 16px;
+      font-size: 18px;
       border-radius: 10px;
       cursor: pointer;
       width: 100%;
       font-weight: bold;
     }
     .btn-main:hover { background-color: #1d4ed8; }
-    #status { margin-top: 18px; text-align: center; font-size: 14px; font-weight: bold; }
-    .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 13px; }
+    #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
+    .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
 
     .modal {
       display: none;
@@ -344,18 +352,18 @@
       max-height: 85vh;
       overflow-y: auto;
     }
-    .modal-content h3 { margin-top: 0; font-size: 18px; }
+    .modal-content h3 { margin-top: 0; font-size: 20px; }
     .input-group { margin-bottom: 14px; text-align: left; }
-    .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #334155; }
+    .input-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 6px; color: #334155; }
     .input-group input, .input-group textarea, .input-group select {
       width: 100%;
       padding: 10px;
-      font-size: 13px;
+      font-size: 15px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
     }
     .modal-btns { display: flex; gap: 10px; margin-top: 24px; }
-    .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; }
     .btn-save { background: #2563eb; color: white; }
     .btn-close { background: #e2e8f0; color: #334155; }
 
@@ -369,6 +377,7 @@
     }
     @media (max-width: 640px) {
       .sidebar { grid-template-columns: repeat(2, 1fr); }
+      .top-row { flex-direction: column; }
     }
   </style>
 </head>
@@ -386,18 +395,20 @@
       <h2>📄 안심 PDF & 이미지 통합 병합기</h2>
       <p class="sub">PDF 파일과 이미지(JPG, PNG 등)를 원하는 순서대로 안전하게 병합하세요.</p>
 
-      <div class="security-banner">
-        <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
-        본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
-        <ul>
-          <li><strong>외부 서버 전송 Zero:</strong> 모든 작업이 브라우저 메모리에서 처리됩니다.</li>
-          <li><strong>개인정보 유출 방지:</strong> 오프라인 환경처럼 안전하게 이용할 수 있습니다.</li>
-        </ul>
-      </div>
+      <div class="top-row">
+        <div class="security-banner">
+          <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+          본 시스템은 사용자의 파일 데이터를 외부 서버로 전송하거나 저장하지 않습니다.
+          <ul>
+            <li><strong>외부 서버 전송 Zero:</strong> 모든 작업이 브라우저 메모리에서 처리됩니다.</li>
+            <li><strong>개인정보 유출 방지:</strong> 오프라인 환경처럼 안전하게 이용할 수 있습니다.</li>
+          </ul>
+        </div>
 
-      <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        📂 <strong>클릭하거나 파일(PDF, 이미지)을 이곳으로 끌어다 놓으세요</strong>
-        <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
+        <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          📂 <strong>클릭하거나 파일(PDF, 이미지)을 이곳으로 끌어다 놓으세요</strong>
+          <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
+        </div>
       </div>
 
       <div class="editor-layout">
