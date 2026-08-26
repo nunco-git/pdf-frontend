@@ -35,7 +35,7 @@
       display: grid;
       grid-template-columns: 220px 1fr;
       gap: 30px;
-      max-width: 1160px;
+      max-width: 1900px;
       width: 100%;
       margin: 0 auto;
       align-items: start;
@@ -101,7 +101,7 @@
 
     .main-content {
       width: 100%;
-      max-width: 900px;
+      max-width: none;
       margin: 0 auto;
       background: white;
       border: 1px solid #e2e8f0;
@@ -144,19 +144,26 @@
     input[type="file"] { display: none; }
 
     .editor-layout {
-      display: grid;
-      grid-template-columns: 1fr 440px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
       gap: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
 
     .file-list-container {
+      flex: 1 1 400px;
+      min-width: 280px;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #fafafa;
       height: 620px;
+      min-height: 200px;
+      max-height: 90vh;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 10px;
+      resize: vertical;
     }
     
     .file-item {
@@ -215,6 +222,9 @@
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
     .preview-panel {
+      flex: 0 0 440px;
+      min-width: 260px;
+      max-width: 90vw;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #f8fafc;
@@ -223,6 +233,10 @@
       flex-direction: column;
       align-items: center;
       height: 620px;
+      min-height: 200px;
+      max-height: 90vh;
+      overflow: auto;
+      resize: both;
     }
     .preview-title { font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
     .preview-box {
@@ -295,7 +309,8 @@
     @media (max-width: 1180px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
       .sidebar { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(4, 1fr); }
-      .editor-layout { grid-template-columns: 1fr; }
+      .editor-layout { flex-direction: column; }
+      .file-list-container, .preview-panel { flex-basis: auto; width: 100%; }
       .preview-panel { height: 400px; }
     }
     @media (max-width: 640px) {
@@ -337,7 +352,7 @@
         </div>
 
         <div class="preview-panel">
-          <div class="preview-title">🔍 회전/페이지 미리보기</div>
+          <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(모서리를 드래그하여 크기 조절)</span></div>
           <div class="preview-box" id="previewBox">
             <div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>
           </div>
