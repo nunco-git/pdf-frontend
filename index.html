@@ -33,9 +33,9 @@
 
     .app-container {
       display: grid;
-      grid-template-columns: 220px 1fr 220px;
+      grid-template-columns: 220px 1fr;
       gap: 30px;
-      max-width: 1400px;
+      max-width: 1160px;
       width: 100%;
       margin: 0 auto;
       align-items: start;
@@ -101,7 +101,7 @@
 
     .main-content {
       width: 100%;
-      max-width: 720px;
+      max-width: 900px;
       margin: 0 auto;
       background: white;
       border: 1px solid #e2e8f0;
@@ -145,7 +145,7 @@
 
     .editor-layout {
       display: grid;
-      grid-template-columns: 1fr 220px;
+      grid-template-columns: 1fr 440px;
       gap: 14px;
       margin-bottom: 20px;
     }
@@ -154,7 +154,7 @@
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #fafafa;
-      height: 310px;
+      height: 620px;
       overflow-y: auto;
       padding: 10px;
     }
@@ -222,7 +222,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 310px;
+      height: 620px;
     }
     .preview-title { font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
     .preview-box {
@@ -292,10 +292,14 @@
     .btn-save { background: #2563eb; color: white; }
     .btn-close { background: #e2e8f0; color: #334155; }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1180px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
-      .sidebar { width: 100%; max-width: 720px; display: grid; grid-template-columns: repeat(2, 1fr); }
+      .sidebar { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(4, 1fr); }
       .editor-layout { grid-template-columns: 1fr; }
+      .preview-panel { height: 400px; }
+    }
+    @media (max-width: 640px) {
+      .sidebar { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -342,13 +346,6 @@
 
       <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
       <div id="status"></div>
-    </div>
-
-    <div class="sidebar">
-      <div class="banner-card" id="card-5"></div>
-      <div class="banner-card" id="card-6"></div>
-      <div class="banner-card" id="card-7"></div>
-      <div class="banner-card" id="card-8"></div>
     </div>
   </div>
 
