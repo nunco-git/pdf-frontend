@@ -431,18 +431,14 @@
 
   <div class="modal" id="adminModal">
     <div class="modal-content">
-      <h3>⚙️ 사이드 배너 수시 편집 (총 8개)</h3>
+      <h3>⚙️ 좌측 배너 수시 편집 (총 4개)</h3>
       <div class="input-group">
         <label>편집할 카드 위치 선택</label>
         <select id="editCardSelect" onchange="loadCardDataToForm()">
-          <option value="1">좌측 1번 카드 (상단)</option>
-          <option value="2">좌측 2번 카드</option>
-          <option value="3">좌측 3번 카드</option>
-          <option value="4">좌측 4번 카드 (하단)</option>
-          <option value="5">우측 5번 카드 (상단)</option>
-          <option value="6">우측 6번 카드</option>
-          <option value="7">우측 7번 카드</option>
-          <option value="8">우측 8번 카드 (하단)</option>
+          <option value="1">1번 카드 (상단)</option>
+          <option value="2">2번 카드</option>
+          <option value="3">3번 카드</option>
+          <option value="4">4번 카드 (하단)</option>
         </select>
       </div>
 
@@ -505,7 +501,7 @@
     const db = firebase.firestore();
 
     const defaultCards = {};
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 4; i++) {
       defaultCards[i] = {
         title: `알림 배너 ${i}`,
         desc: `클릭하면 해당 링크로 바로 연결됩니다.`,
@@ -515,18 +511,18 @@
       };
     }
 
+    let cachedCards = null; // Firestore에서 불러온 배너 데이터 캐시
+
     function getCardData() {
-      const saved = localStorage.getItem('pdf_app_banners_8');
-      return saved ? JSON.parse(saved) : defaultCards;
+      return cachedCards || defaultCards;
     }
 
-    function renderBanners() {
-      const cards = getCardData();
-      for (let i = 1; i <= 8; i++) {
+    function applyCardsToDOM(cards) {
+      for (let i = 1; i <= 4; i++) {
         const cardEl = document.getElementById(`card-${i}`);
         if (!cardEl) continue;
         const data = cards[i] || defaultCards[i];
-        
+
         const imgTag = data.img ? `<img src="${data.img}" alt="banner" />` : '';
         cardEl.innerHTML = `
           ${imgTag}
@@ -537,8 +533,23 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      renderBanners();
+    // Firestore(settings/banners 문서)에서 배너 데이터를 불러와 화면에 표시
+    // → localStorage가 아니므로 모든 방문자에게 동일하게 반영됩니다.
+    async function fetchAndRenderBanners() {
+      try {
+        const doc = await db.collection('settings').doc('banners').get();
+        cachedCards = (doc.exists && doc.data().cards)
+          ? { ...defaultCards, ...doc.data().cards }
+          : { ...defaultCards };
+      } catch (error) {
+        console.error('배너 데이터 불러오기 오류:', error);
+        cachedCards = { ...defaultCards };
+      }
+      applyCardsToDOM(cachedCards);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await fetchAndRenderBanners();
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('admin') === 'true') {
         openAdminModal();
@@ -587,9 +598,9 @@
       document.getElementById('editBtnText').value = data.btnText;
     }
 
-    function saveCardData() {
+    async function saveCardData() {
       const id = document.getElementById('editCardSelect').value;
-      const cards = getCardData();
+      const cards = { ...getCardData() };
 
       cards[id] = {
         title: document.getElementById('editTitle').value,
@@ -599,9 +610,16 @@
         btnText: document.getElementById('editBtnText').value
       };
 
-      localStorage.setItem('pdf_app_banners_8', JSON.stringify(cards));
-      renderBanners();
-      alert(`${id}번 배너 카드가 저장되었습니다!`);
+      try {
+        // Firestore에 저장 → 모든 방문자의 화면에 공통으로 반영됩니다.
+        await db.collection('settings').doc('banners').set({ cards }, { merge: true });
+        cachedCards = cards;
+        applyCardsToDOM(cachedCards);
+        alert(`${id}번 배너 카드가 저장되었습니다! (모든 방문자에게 반영됩니다)`);
+      } catch (error) {
+        console.error('배너 저장 오류:', error);
+        alert('저장 중 오류가 발생했습니다. Firestore 쓰기 권한(보안 규칙)을 확인해주세요.');
+      }
     }
 
     // 3. 파일 관련 처리 로직
