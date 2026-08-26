@@ -811,7 +811,7 @@
               if (wrap.dataset.rendered === '1') return;
               wrap.dataset.rendered = '1';
               renderObserver.unobserve(wrap);
-              renderPdfPage(pdf, wrap, itemData.rotation);
+              renderPdfPage(pdf, wrap, itemData);
             });
           }, { root: previewBox, rootMargin: '600px 0px', threshold: 0.01 });
 
@@ -854,7 +854,7 @@
       }
     }
 
-    async function renderPdfPage(pdf, wrap, rotation) {
+    async function renderPdfPage(pdf, wrap, itemData) {
       try {
         const pageNum = parseInt(wrap.dataset.pageNum, 10);
         const page = await pdf.getPage(pageNum);
@@ -871,7 +871,8 @@
         canvas.className = 'pdf-page-canvas';
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        if (rotation) canvas.style.transform = `rotate(${rotation}deg)`;
+        // 렌더링 시점의 최신 회전값을 반영 (사용자가 그 사이 회전값을 바꿨을 수 있음)
+        if (itemData.rotation) canvas.style.transform = `rotate(${itemData.rotation}deg)`;
         const context = canvas.getContext('2d');
         await page.render({ canvasContext: context, viewport }).promise;
 
@@ -889,6 +890,14 @@
       const el = document.getElementById('previewElement');
       if (el) {
         el.style.transform = `rotate(${deg}deg)`;
+        return;
+      }
+      // PDF 다중 페이지 미리보기: 이미 렌더링된 모든 페이지 캔버스에 즉시 회전 적용
+      const previewBox = document.getElementById('previewBox');
+      if (previewBox) {
+        previewBox.querySelectorAll('.pdf-page-canvas').forEach((canvas) => {
+          canvas.style.transform = deg ? `rotate(${deg}deg)` : '';
+        });
       }
     }
 
