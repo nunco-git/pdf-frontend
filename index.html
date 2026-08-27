@@ -11,6 +11,8 @@
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
+  <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -374,6 +376,13 @@
       font-weight: bold;
     }
     .btn-main:hover { background-color: #1d4ed8; }
+    .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+    .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
+    .btn-secondary-row { display: flex; gap: 10px; }
+    .btn-secondary { flex: 1; background-color: white; color: #2563eb; border: 1.5px solid #2563eb; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+    .btn-secondary:hover { background-color: #eff6ff; }
+    .btn-secondary:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
 
     .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
     .btn-reset:hover { background: #ef4444; color: white; }
@@ -456,6 +465,7 @@
             <ul>
               <li><strong>외부 서버 전송 Zero:</strong> 파일 데이터는 외부 서버로 전송되지 않고, 모든 작업이 브라우저 안에서만 처리됩니다.</li>
               <li><strong>📖 PDF 미리보기 지원:</strong> 병합하기 전, 각 PDF 파일의 모든 페이지를 스크롤하며 실시간으로 확인할 수 있습니다.</li>
+              <li><strong>🖼️ 이미지 변환:</strong> 2쪽이 넘어가는 PDF 파일은 한 장으로 합쳐지지 않고, 1쪽씩 각각 별도의 이미지 파일로 변환됩니다(여러 장이면 zip으로 묶여 다운로드).</li>
             </ul>
           </div>
         </div>
@@ -481,7 +491,13 @@
         </div>
       </div>
 
-      <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
+      <div class="action-btn-group">
+        <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
+        <div class="btn-secondary-row">
+          <button class="btn-secondary" id="img-high-btn" onclick="exportAsImages('high')" disabled>🖼️ 이미지 변환 (고화질)</button>
+          <button class="btn-secondary" id="img-low-btn" onclick="exportAsImages('low')" disabled>🖼️ 이미지 변환 (저화질)</button>
+        </div>
+      </div>
       <div id="status"></div>
     </div>
   </div>
@@ -768,14 +784,23 @@
     function renderFileList() {
       const container = document.getElementById('fileListContainer');
       const resetBtn = document.getElementById('reset-btn');
+      const mergeBtn = document.getElementById('merge-btn');
+      const imgHighBtn = document.getElementById('img-high-btn');
+      const imgLowBtn = document.getElementById('img-low-btn');
       container.innerHTML = '';
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
         if (resetBtn) resetBtn.disabled = true;
+        if (mergeBtn) mergeBtn.disabled = true;
+        if (imgHighBtn) imgHighBtn.disabled = true;
+        if (imgLowBtn) imgLowBtn.disabled = true;
         showPreview(null);
         return;
       }
       if (resetBtn) resetBtn.disabled = false;
+      if (mergeBtn) mergeBtn.disabled = false;
+      if (imgHighBtn) imgHighBtn.disabled = false;
+      if (imgLowBtn) imgLowBtn.disabled = false;
 
       fileList.forEach((itemData, index) => {
         const file = itemData.file;
@@ -1128,6 +1153,145 @@
         console.error("병합 중 오류 발생:", err);
         statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
         statusDiv.style.color = '#ef4444';
+      }
+    }
+
+    // 5. 이미지 변환 - PDF는 2쪽이 넘어가도 한 장으로 합쳐지지 않고 1쪽씩 개별 이미지로 변환된다.
+    //    quality: 'high' → 고해상도 PNG(무손실), 'low' → 저해상도 JPEG(용량 절감)
+    async function exportAsImages(quality) {
+      const statusDiv = document.getElementById('status');
+      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
+
+      const isHigh = quality === 'high';
+      const renderScale = isHigh ? 2.5 : 1.0;      // pdf.js 렌더링 배율 (기본 72dpi 기준)
+      const outputFormat = isHigh ? 'image/png' : 'image/jpeg';
+      const outputExt = isHigh ? 'png' : 'jpg';
+      const jpegQuality = 0.6; // low일 때만 사용
+
+      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn')];
+      buttons.forEach(b => { if (b) b.disabled = true; });
+      statusDiv.style.color = '#2563eb';
+
+      function canvasToBlob(canvas) {
+        return new Promise(resolve => {
+          if (isHigh) canvas.toBlob(resolve, outputFormat);
+          else canvas.toBlob(resolve, outputFormat, jpegQuality);
+        });
+      }
+
+      // 회전을 반영해 <img> 원본을 캔버스에 그린다.
+      async function renderImageFileToCanvas(file, rotationDeg) {
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        const img = await new Promise((resolve) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.src = dataUrl;
+        });
+        const swap = (rotationDeg === 90 || rotationDeg === 270);
+        const canvas = document.createElement('canvas');
+        canvas.width = swap ? img.height : img.width;
+        canvas.height = swap ? img.width : img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((rotationDeg || 0) * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        return canvas;
+      }
+
+      try {
+        // 1) 병합 순서 그대로, PDF는 페이지 단위로 풀어서 "작업 목록"을 먼저 만든다.
+        const jobs = []; // { type:'image'|'pdfpage', file, rotation, pdf?, pageIndex? }
+        for (const itemData of fileList) {
+          const file = itemData.file;
+          if (file.type.startsWith('image/')) {
+            jobs.push({ type: 'image', file, rotation: itemData.rotation || 0, baseName: file.name.replace(/\.[^.]+$/, '') });
+          } else if (file.type === 'application/pdf') {
+            const fileBytes = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
+            const totalPages = pdf.numPages;
+
+            let pageNums = [];
+            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
+              itemData.pageRange.split(',').forEach(part => {
+                if (part.includes('-')) {
+                  const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
+                  for (let p = start; p <= end; p++) if (p >= 1 && p <= totalPages) pageNums.push(p);
+                } else {
+                  const p = parseInt(part.trim(), 10);
+                  if (p >= 1 && p <= totalPages) pageNums.push(p);
+                }
+              });
+            } else {
+              pageNums = Array.from({ length: totalPages }, (_, i) => i + 1);
+            }
+
+            const baseName = file.name.replace(/\.[^.]+$/, '');
+            pageNums.forEach((pageNum, idx) => {
+              jobs.push({ type: 'pdfpage', pdf, pageIndex: pageNum, rotation: itemData.rotation || 0, baseName, multiPage: pageNums.length > 1, pageOrdinal: idx + 1 });
+            });
+          }
+        }
+
+        if (jobs.length === 0) { alert('변환할 페이지가 없습니다.'); return; }
+
+        // 2) 작업 목록을 순서대로 렌더링해 이미지 blob으로 만든다.
+        const outputs = []; // { filename, blob }
+        for (let i = 0; i < jobs.length; i++) {
+          const job = jobs[i];
+          statusDiv.innerText = `⚡ 이미지 변환 중... (${i + 1}/${jobs.length})`;
+
+          let canvas;
+          if (job.type === 'image') {
+            canvas = await renderImageFileToCanvas(job.file, job.rotation);
+          } else {
+            const page = await job.pdf.getPage(job.pageIndex);
+            const viewport = page.getViewport({ scale: renderScale, rotation: job.rotation });
+            canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+          }
+
+          const blob = await canvasToBlob(canvas);
+          const pageSuffix = job.type === 'pdfpage' && job.multiPage ? `_p${String(job.pageOrdinal).padStart(2, '0')}` : '';
+          const seq = String(i + 1).padStart(3, '0');
+          outputs.push({ filename: `${seq}_${job.baseName}${pageSuffix}.${outputExt}`, blob });
+        }
+
+        // 3) 결과가 1장이면 이미지 파일 그대로, 여러 장이면 zip으로 묶어서 다운로드한다.
+        const qualityLabel = isHigh ? '고화질' : '저화질';
+        if (outputs.length === 1) {
+          const url = URL.createObjectURL(outputs[0].blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = outputs[0].filename;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else {
+          const zip = new JSZip();
+          outputs.forEach(o => zip.file(o.filename, o.blob));
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          const url = URL.createObjectURL(zipBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `이미지_변환_결과(${qualityLabel}).zip`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        statusDiv.innerText = `✅ 총 ${outputs.length}장의 이미지(${qualityLabel})로 변환되었습니다!`;
+        statusDiv.style.color = '#166534';
+      } catch (err) {
+        console.error('이미지 변환 중 오류 발생:', err);
+        statusDiv.innerText = '❌ 이미지 변환 중 오류가 발생했습니다.';
+        statusDiv.style.color = '#ef4444';
+      } finally {
+        buttons.forEach(b => { if (b) b.disabled = false; });
       }
     }
   </script>
