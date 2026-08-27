@@ -8,7 +8,6 @@
   <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
@@ -127,6 +126,8 @@
       line-height: 1.55;
       overflow-y: auto;
     }
+    .security-banner-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .security-banner-header strong { margin-bottom: 0; }
     .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; }
     .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
 
@@ -145,25 +146,15 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       text-align: center;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       padding: 10px;
     }
-    .btn-reset {
-      border: 1px solid #fca5a5;
-      background: #fef2f2;
-      color: #dc2626;
-      font-size: 13px;
-      font-weight: bold;
-      padding: 7px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .btn-reset:hover { background: #fee2e2; }
+    .cross-link { margin-top: 2px; font-size: 0.78rem; color: #2563eb; text-decoration: none; font-weight: 600; }
+    .cross-link:hover { text-decoration: underline; }
     .top-col-guide {
       flex: 1 1 46%;
       display: flex;
@@ -384,22 +375,9 @@
     }
     .btn-main:hover { background-color: #1d4ed8; }
 
-    .bottom-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
-    .bottom-btn-group .btn-main { flex: 1 1 100%; }
-    .btn-img-convert {
-      flex: 1 1 calc(50% - 5px);
-      border: 2px solid #2563eb;
-      background: white;
-      color: #2563eb;
-      padding: 14px;
-      font-size: 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s;
-    }
-    .btn-img-convert:hover { background-color: #eff6ff; }
-
+    .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
+    .btn-reset:hover { background: #ef4444; color: white; }
+    .btn-reset:disabled { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; background: white; }
     #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
     .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
 
@@ -465,12 +443,16 @@
       <div class="top-section">
         <div class="top-col-title">
           <h2>📄 이지 PDF & 이미지<br>병합기, 뷰어</h2>
-          <button type="button" class="btn-reset" onclick="resetAll()">🔄 초기화 (첨부 파일 전체 삭제)</button>
+          <a class="cross-link" href="https://nunco-git.github.io/excelmerge/" target="_blank" rel="noopener noreferrer">📊 엑셀 병합기 바로가기 →</a>
+          <a class="cross-link" href="https://nunco-git.github.io/hwpxmerge/" target="_blank" rel="noopener noreferrer">📝 한글(HWPX) 병합기 바로가기 →</a>
         </div>
 
         <div class="top-col-guide">
           <div class="security-banner">
-            <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+            <div class="security-banner-header">
+              <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+              <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
+            </div>
             <ul>
               <li><strong>외부 서버 전송 Zero:</strong> 파일 데이터는 외부 서버로 전송되지 않고, 모든 작업이 브라우저 안에서만 처리됩니다.</li>
               <li><strong>📖 PDF 미리보기 지원:</strong> 병합하기 전, 각 PDF 파일의 모든 페이지를 스크롤하며 실시간으로 확인할 수 있습니다.</li>
@@ -499,11 +481,7 @@
         </div>
       </div>
 
-      <div class="bottom-btn-group">
-        <button class="btn-main" onclick="mergeFiles()">PDF 변환 및 병합</button>
-        <button class="btn-img-convert" onclick="convertToImages('high')">🖼️ 이미지 변환 (고화질)</button>
-        <button class="btn-img-convert" onclick="convertToImages('low')">🖼️ 이미지 변환 (저화질)</button>
-      </div>
+      <button class="btn-main" onclick="mergeFiles()">선택한 순서대로 하나로 병합하여 다운로드</button>
       <div id="status"></div>
     </div>
   </div>
@@ -596,19 +574,42 @@
       return cachedCards || defaultCards;
     }
 
+    // 안전한 http/https URL만 허용 (javascript:, data: 등 스킴 차단)
+    function sanitizeUrl(url) {
+      if (!url) return '';
+      const trimmed = String(url).trim();
+      return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+    }
+
     function applyCardsToDOM(cards) {
       for (let i = 1; i <= 4; i++) {
         const cardEl = document.getElementById(`card-${i}`);
         if (!cardEl) continue;
         const data = cards[i] || defaultCards[i];
+        cardEl.innerHTML = ''; // 이전 내용 제거
 
-        const imgTag = data.img ? `<img src="${data.img}" alt="banner" />` : '';
-        cardEl.innerHTML = `
-          ${imgTag}
-          <h4>${data.title}</h4>
-          <p>${data.desc}</p>
-          <a href="${data.link}" target="_blank">${data.btnText}</a>
-        `;
+        const safeImg = sanitizeUrl(data.img);
+        if (safeImg) {
+          const img = document.createElement('img');
+          img.src = safeImg;
+          img.alt = 'banner';
+          cardEl.appendChild(img);
+        }
+
+        const h4 = document.createElement('h4');
+        h4.textContent = data.title || '';
+        cardEl.appendChild(h4);
+
+        const p = document.createElement('p');
+        p.textContent = data.desc || '';
+        cardEl.appendChild(p);
+
+        const a = document.createElement('a');
+        a.href = sanitizeUrl(data.link) || '#';
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = data.btnText || '';
+        cardEl.appendChild(a);
       }
     }
 
@@ -753,24 +754,28 @@
       }
     }
 
+    // 첨부된 모든 파일을 목록에서 한 번에 제거 (팝업 없이 즉시 초기화)
     function resetAll() {
       if (fileList.length === 0) return;
       fileList = [];
       selectedIndex = null;
+      draggedIndex = null;
+      const fi = document.getElementById('fileInput');
+      if (fi) fi.value = '';
       renderFileList();
-      showPreview(null);
-      const statusEl = document.getElementById('status');
-      if (statusEl) statusEl.innerHTML = '';
     }
 
     function renderFileList() {
       const container = document.getElementById('fileListContainer');
+      const resetBtn = document.getElementById('reset-btn');
       container.innerHTML = '';
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
+        if (resetBtn) resetBtn.disabled = true;
         showPreview(null);
         return;
       }
+      if (resetBtn) resetBtn.disabled = false;
 
       fileList.forEach((itemData, index) => {
         const file = itemData.file;
@@ -1122,125 +1127,6 @@
       } catch (err) {
         console.error("병합 중 오류 발생:", err);
         statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#ef4444';
-      }
-    }
-
-    // 5. PDF/이미지 → 이미지 파일 변환 (PDF는 페이지마다 1장씩 이미지로 변환)
-    async function convertToImages(quality) {
-      const statusDiv = document.getElementById('status');
-      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-
-      const isHigh = quality === 'high';
-      const scale = isHigh ? 3 : 1.2;
-      const mimeType = isHigh ? 'image/png' : 'image/jpeg';
-      const ext = isHigh ? 'png' : 'jpg';
-      const jpegQuality = 0.7;
-
-      statusDiv.innerText = `⚡ 이미지로 변환 중 (${isHigh ? '고화질' : '저화질'})...`;
-      statusDiv.style.color = '#2563eb';
-
-      // 회전값을 반영해 캔버스에 그리는 공통 헬퍼
-      function drawRotated(sourceCanvasOrImg, srcWidth, srcHeight, rotation, drawFn) {
-        const canvas = document.createElement('canvas');
-        const swapped = (rotation === 90 || rotation === 270);
-        canvas.width = swapped ? srcHeight : srcWidth;
-        canvas.height = swapped ? srcWidth : srcHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((rotation * Math.PI) / 180);
-        ctx.translate(-srcWidth / 2, -srcHeight / 2);
-        drawFn(ctx);
-        ctx.restore();
-        return canvas;
-      }
-
-      try {
-        const outputs = []; // { name, blob }
-
-        for (let i = 0; i < fileList.length; i++) {
-          const itemData = fileList[i];
-          const file = itemData.file;
-          const rotation = itemData.rotation || 0;
-          const baseName = file.name.replace(/\.[^/.]+$/, '');
-          const prefix = String(i + 1).padStart(2, '0');
-
-          if (file.type === 'application/pdf') {
-            const fileBytes = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
-
-            for (let p = 1; p <= pdf.numPages; p++) {
-              const page = await pdf.getPage(p);
-              const viewport = page.getViewport({ scale });
-
-              const renderCanvas = document.createElement('canvas');
-              renderCanvas.width = viewport.width;
-              renderCanvas.height = viewport.height;
-              await page.render({ canvasContext: renderCanvas.getContext('2d'), viewport }).promise;
-
-              const finalCanvas = rotation
-                ? drawRotated(renderCanvas, viewport.width, viewport.height, rotation, (ctx) => ctx.drawImage(renderCanvas, 0, 0))
-                : renderCanvas;
-
-              const blob = await new Promise((resolve) => finalCanvas.toBlob(resolve, mimeType, isHigh ? undefined : jpegQuality));
-              const pageLabel = pdf.numPages > 1 ? `_${String(p).padStart(2, '0')}` : '';
-              outputs.push({ name: `${prefix}_${baseName}${pageLabel}.${ext}`, blob });
-            }
-          } else if (file.type.startsWith('image/')) {
-            const dataUrl = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(file);
-            });
-            const img = await new Promise((resolve) => {
-              const im = new Image();
-              im.onload = () => resolve(im);
-              im.src = dataUrl;
-            });
-
-            const finalCanvas = rotation
-              ? drawRotated(img, img.width, img.height, rotation, (ctx) => ctx.drawImage(img, 0, 0))
-              : (() => {
-                  const c = document.createElement('canvas');
-                  c.width = img.width; c.height = img.height;
-                  c.getContext('2d').drawImage(img, 0, 0);
-                  return c;
-                })();
-
-            const blob = await new Promise((resolve) => finalCanvas.toBlob(resolve, mimeType, isHigh ? undefined : jpegQuality));
-            outputs.push({ name: `${prefix}_${baseName}.${ext}`, blob });
-          }
-        }
-
-        if (outputs.length === 0) {
-          statusDiv.innerText = '❌ 변환할 파일이 없습니다.';
-          statusDiv.style.color = '#ef4444';
-          return;
-        }
-
-        if (outputs.length === 1) {
-          const url = URL.createObjectURL(outputs[0].blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = outputs[0].name;
-          a.click();
-        } else {
-          const zip = new JSZip();
-          outputs.forEach((o) => zip.file(o.name, o.blob));
-          const zipBlob = await zip.generateAsync({ type: 'blob' });
-          const url = URL.createObjectURL(zipBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `이미지_변환_${isHigh ? '고화질' : '저화질'}.zip`;
-          a.click();
-        }
-
-        statusDiv.innerText = `✅ 이미지 변환 완료! (총 ${outputs.length}개 파일)`;
-        statusDiv.style.color = '#166534';
-      } catch (err) {
-        console.error("이미지 변환 중 오류 발생:", err);
-        statusDiv.innerText = '❌ 이미지 변환 중 오류가 발생했습니다.';
         statusDiv.style.color = '#ef4444';
       }
     }
