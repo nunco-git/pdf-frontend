@@ -141,14 +141,28 @@
     .top-col-title {
       flex: 0 0 22%;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 10px;
       text-align: center;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       padding: 10px;
     }
+    .btn-reset {
+      border: 1px solid #fca5a5;
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: bold;
+      padding: 7px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-reset:hover { background: #fee2e2; }
     .top-col-guide {
       flex: 1 1 46%;
       display: flex;
@@ -433,6 +447,7 @@
       <div class="top-section">
         <div class="top-col-title">
           <h2>📄 이지 PDF & 이미지<br>병합기, 뷰어</h2>
+          <button type="button" class="btn-reset" onclick="resetAll()">🔄 초기화 (첨부 파일 전체 삭제)</button>
         </div>
 
         <div class="top-col-guide">
@@ -714,6 +729,16 @@
       if (selectedIndex === null && fileList.length > 0) {
         selectItem(0);
       }
+    }
+
+    function resetAll() {
+      if (fileList.length === 0) return;
+      fileList = [];
+      selectedIndex = null;
+      renderFileList();
+      showPreview(null);
+      const statusEl = document.getElementById('status');
+      if (statusEl) statusEl.innerHTML = '';
     }
 
     function renderFileList() {
