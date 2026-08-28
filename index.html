@@ -407,6 +407,24 @@
       pointer-events: none;
     }
 
+    /* HWPX(한글) 텍스트 전용 미리보기 */
+    .preview-box.hwpx-text-mode {
+      display: block;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0;
+    }
+    .hwpx-text-preview {
+      background: #fff;
+      border-radius: 4px;
+      margin: 10px;
+      padding: 20px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1e293b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
     .btn-main {
       background-color: #2563eb;
       color: white;
@@ -523,7 +541,7 @@
         <div class="top-col-drop">
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
             📂 <strong>클릭하거나 파일(PDF, 이미지)을 이곳으로 끌어다 놓으세요</strong>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
+            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwpx" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
       </div>
@@ -808,6 +826,8 @@
     function getFileKind(file) {
       if (file.type === 'application/pdf') return 'pdf';
       if (file.type.startsWith('image/')) return 'image';
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (ext === 'hwpx') return 'hwpx';
       return null;
     }
 
@@ -969,7 +989,7 @@
     async function showPreview(itemData) {
       const previewBox = document.getElementById('previewBox');
       previewBox.innerHTML = '';
-      previewBox.classList.remove('pdf-scroll-mode');
+      previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
 
       if (!itemData) {
         previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>';
@@ -1060,7 +1080,88 @@
           console.error("미리보기 로드 오류:", err);
           previewBox.innerHTML = '<div class="preview-placeholder">미리보기를 불러올 수 없습니다.</div>';
         }
+      } else if (kind === 'hwpx') {
+        await showHwpxPreview(file, previewBox);
       }
+    }
+
+    // HWPX(ZIP+XML) 문서 텍스트 미리보기
+    async function showHwpxPreview(file, previewBox) {
+      previewBox.classList.add('hwpx-text-mode');
+      previewBox.innerHTML = '<div class="preview-placeholder">한글 파일을 불러오는 중...</div>';
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+
+        // 1) 한글 프로그램이 자동 생성하는 미리보기 텍스트 스트림을 우선 사용
+        const previewEntries = zip.file(/Preview\/PrvText\.txt$/i);
+        let text = '';
+
+        if (previewEntries && previewEntries.length > 0) {
+          const bytes = await previewEntries[0].async('uint8array');
+          text = decodeHwpxText(bytes);
+        }
+
+        // 2) 없으면 본문 section XML에서 태그를 제거해 텍스트만 추출 (서식 없음)
+        if (!text || text.trim() === '') {
+          const sectionNames = Object.keys(zip.files)
+            .filter(name => /Contents\/section\d+\.xml$/i.test(name))
+            .sort();
+          let combined = '';
+          for (const name of sectionNames) {
+            const xml = await zip.file(name).async('string');
+            combined += xmlToPlainText(xml) + '\n\n';
+          }
+          text = combined.trim();
+        }
+
+        if (!text || text.trim() === '') {
+          previewBox.innerHTML = '<div class="preview-placeholder">본문 내용을 추출하지 못했습니다.<br>(암호화되었거나 지원되지 않는 구조일 수 있습니다)</div>';
+          return;
+        }
+
+        previewBox.innerHTML = `<div class="hwpx-text-preview">${escapeHtmlForPreview(text)}</div>`;
+      } catch (err) {
+        console.error('HWPX 미리보기 오류:', err);
+        previewBox.innerHTML = '<div class="preview-placeholder">한글 파일 미리보기를 불러올 수 없습니다.</div>';
+      }
+    }
+
+    function decodeHwpxText(bytes) {
+      try {
+        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          return new TextDecoder('utf-16le').decode(bytes.slice(2));
+        }
+        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          return new TextDecoder('utf-16be').decode(bytes.slice(2));
+        }
+        const decoded = new TextDecoder('utf-16le').decode(bytes);
+        if (/\uFFFD/.test(decoded)) {
+          return new TextDecoder('utf-8').decode(bytes);
+        }
+        return decoded;
+      } catch (e) {
+        return new TextDecoder('utf-8').decode(bytes);
+      }
+    }
+
+    function xmlToPlainText(xml) {
+      return xml
+        .replace(/<[^>]+>/g, '\n')
+        .replace(/\n{2,}/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    function escapeHtmlForPreview(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
 
     async function renderPdfPage(pdf, wrap, itemData) {
