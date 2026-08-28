@@ -425,6 +425,36 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
+    /* HWPX 원본형(A4) 미리보기 */
+    .preview-box.hwpx-text-mode { overflow-x: auto; }
+    .hwpx-render-wrap {
+      background: #e2e8f0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .hwpx-page {
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      box-sizing: border-box;
+      font-size: 10pt;
+      line-height: 1.6;
+      word-break: break-word;
+      color: #111827;
+      flex-shrink: 0;
+    }
+    .hwpx-preview-table {
+      border-collapse: collapse;
+      margin: 4px 0;
+      font-size: inherit;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .hwpx-preview-table td { vertical-align: top; }
+    .hwpx-preview-table td p { margin: 0; }
+
     .btn-main {
       background-color: #2563eb;
       color: white;
@@ -1085,7 +1115,7 @@
       }
     }
 
-    // HWPX(ZIP+XML) 문서 텍스트 미리보기
+    // HWPX(ZIP+XML) 문서 미리보기 — 종이(A4) 모양 + 정렬/줄간격/글자서식 + 표 테두리·병합까지 반영
     async function showHwpxPreview(file, previewBox) {
       previewBox.classList.add('hwpx-text-mode');
       previewBox.innerHTML = '<div class="preview-placeholder">한글 파일을 불러오는 중...</div>';
@@ -1094,38 +1124,287 @@
         const buffer = await file.arrayBuffer();
         const zip = await JSZip.loadAsync(buffer);
 
-        // 1) 한글 프로그램이 자동 생성하는 미리보기 텍스트 스트림을 우선 사용
-        const previewEntries = zip.file(/Preview\/PrvText\.txt$/i);
-        let text = '';
+        const sectionNames = Object.keys(zip.files)
+          .filter(name => /Contents\/section\d+\.xml$/i.test(name))
+          .sort();
 
-        if (previewEntries && previewEntries.length > 0) {
-          const bytes = await previewEntries[0].async('uint8array');
-          text = decodeHwpxText(bytes);
-        }
-
-        // 2) 없으면 본문 section XML에서 태그를 제거해 텍스트만 추출 (서식 없음)
-        if (!text || text.trim() === '') {
-          const sectionNames = Object.keys(zip.files)
-            .filter(name => /Contents\/section\d+\.xml$/i.test(name))
-            .sort();
-          let combined = '';
-          for (const name of sectionNames) {
-            const xml = await zip.file(name).async('string');
-            combined += xmlToPlainText(xml) + '\n\n';
-          }
-          text = combined.trim();
-        }
-
-        if (!text || text.trim() === '') {
-          previewBox.innerHTML = '<div class="preview-placeholder">본문 내용을 추출하지 못했습니다.<br>(암호화되었거나 지원되지 않는 구조일 수 있습니다)</div>';
+        if (sectionNames.length === 0) {
+          await showHwpxPlainTextFallback(zip, previewBox);
           return;
         }
 
-        previewBox.innerHTML = `<div class="hwpx-text-preview">${escapeHtmlForPreview(text)}</div>`;
+        const headerEntries = zip.file(/Contents\/header\.xml$/i);
+        const headerXml = (headerEntries && headerEntries.length > 0) ? await headerEntries[0].async('string') : '';
+        const headerDoc = headerXml ? new DOMParser().parseFromString(headerXml, 'application/xml') : null;
+        const styles = parseHwpxStyles(headerDoc);
+
+        let pagesHtml = '';
+        for (const name of sectionNames) {
+          const xml = await zip.file(name).async('string');
+          const doc = new DOMParser().parseFromString(xml, 'application/xml');
+          if (doc.getElementsByTagName('parsererror').length > 0) continue;
+          pagesHtml += renderHwpxSection(doc, styles);
+        }
+
+        if (pagesHtml.trim() === '') {
+          await showHwpxPlainTextFallback(zip, previewBox);
+          return;
+        }
+
+        previewBox.innerHTML = `<div class="hwpx-render-wrap">${pagesHtml}</div>`;
       } catch (err) {
-        console.error('HWPX 미리보기 오류:', err);
-        previewBox.innerHTML = '<div class="preview-placeholder">한글 파일 미리보기를 불러올 수 없습니다.</div>';
+        console.error('HWPX 원본형 미리보기 오류, 텍스트 미리보기로 대체합니다:', err);
+        try {
+          const buffer2 = await file.arrayBuffer();
+          const zip2 = await JSZip.loadAsync(buffer2);
+          await showHwpxPlainTextFallback(zip2, previewBox);
+        } catch (err2) {
+          previewBox.innerHTML = '<div class="preview-placeholder">한글 파일 미리보기를 불러올 수 없습니다.</div>';
+        }
       }
+    }
+
+    // 표/서식 렌더링이 불가능한 구조일 때의 텍스트 전용 대체 미리보기 (기존 방식)
+    async function showHwpxPlainTextFallback(zip, previewBox) {
+      const previewEntries = zip.file(/Preview\/PrvText\.txt$/i);
+      let text = '';
+
+      if (previewEntries && previewEntries.length > 0) {
+        const bytes = await previewEntries[0].async('uint8array');
+        text = decodeHwpxText(bytes);
+      }
+
+      if (!text || text.trim() === '') {
+        const sectionNames = Object.keys(zip.files)
+          .filter(name => /Contents\/section\d+\.xml$/i.test(name))
+          .sort();
+        let combined = '';
+        for (const name of sectionNames) {
+          const xml = await zip.file(name).async('string');
+          combined += xmlToPlainText(xml) + '\n\n';
+        }
+        text = combined.trim();
+      }
+
+      if (!text || text.trim() === '') {
+        previewBox.innerHTML = '<div class="preview-placeholder">본문 내용을 추출하지 못했습니다.<br>(암호화되었거나 지원되지 않는 구조일 수 있습니다)</div>';
+        return;
+      }
+
+      previewBox.innerHTML = `<div class="hwpx-text-preview">${escapeHtmlForPreview(text)}</div>`;
+    }
+
+    // ── HWPX 서식 렌더러 헬퍼 ──────────────────────────────────────
+
+    // 태그 접두어(hp:, hs: 등 생성기마다 다를 수 있음)와 무관하게 로컬 이름으로 매칭
+    function hwpxLocalName(el) {
+      const tn = el.tagName || el.nodeName || '';
+      const idx = tn.indexOf(':');
+      return idx >= 0 ? tn.slice(idx + 1) : tn;
+    }
+    function hwpxFindAll(root, name) {
+      return Array.from(root.getElementsByTagName('*')).filter(el => hwpxLocalName(el) === name);
+    }
+    function hwpxChildren(root, name) {
+      return Array.from(root.children || []).filter(el => hwpxLocalName(el) === name);
+    }
+    function hwpxFirst(root, name) {
+      return hwpxFindAll(root, name)[0] || null;
+    }
+
+    // HWPUNIT(1/7200 인치)을 mm로 변환 — 페이지 크기·여백·표 크기가 모두 이 단위를 씀
+    function hwpunitToMm(v) {
+      const n = parseFloat(v);
+      if (isNaN(n)) return 0;
+      return (n / 7200) * 25.4;
+    }
+
+    function parseHwpxStyles(headerDoc) {
+      const styles = { fonts: {}, charPr: {}, paraPr: {}, borderFill: {} };
+      if (!headerDoc) return styles;
+
+      hwpxFindAll(headerDoc, 'font').forEach((f) => {
+        const id = f.getAttribute('id');
+        if (id !== null) styles.fonts[id] = f.getAttribute('face') || '';
+      });
+
+      hwpxFindAll(headerDoc, 'borderFill').forEach((bf) => {
+        const id = bf.getAttribute('id');
+        if (id === null) return;
+        const left = hwpxFirst(bf, 'leftBorder');
+        styles.borderFill[id] = {
+          width: (left && left.getAttribute('width')) || '0.12mm',
+          color: (left && left.getAttribute('color')) ? ('#' + left.getAttribute('color')) : '#94a3b8'
+        };
+      });
+
+      hwpxFindAll(headerDoc, 'charPr').forEach((cp) => {
+        const id = cp.getAttribute('id');
+        if (id === null) return;
+        const heightRaw = cp.getAttribute('height');
+        const fontRef = hwpxFirst(cp, 'fontRef');
+        const fontId = fontRef ? fontRef.getAttribute('hangul') : null;
+        styles.charPr[id] = {
+          size: heightRaw ? (parseInt(heightRaw, 10) / 100) : 10,
+          bold: !!hwpxFirst(cp, 'bold'),
+          italic: !!hwpxFirst(cp, 'italic'),
+          color: cp.getAttribute('textColor') ? ('#' + cp.getAttribute('textColor')) : null,
+          fontFace: (fontId !== null && styles.fonts[fontId]) ? styles.fonts[fontId] : null
+        };
+      });
+
+      hwpxFindAll(headerDoc, 'paraPr').forEach((pp) => {
+        const id = pp.getAttribute('id');
+        if (id === null) return;
+        const alignEl = hwpxFirst(pp, 'align');
+        const lineSpacingEl = hwpxFirst(pp, 'lineSpacing');
+        styles.paraPr[id] = {
+          align: alignEl ? (alignEl.getAttribute('horizontal') || 'LEFT') : 'LEFT',
+          lineSpacing: lineSpacingEl ? (lineSpacingEl.getAttribute('value') || '160') : '160'
+        };
+      });
+
+      return styles;
+    }
+
+    function getHwpxPageSetup(doc) {
+      let width = 59528, height = 84188; // A4 기본값(HWPUNIT)
+      let m = { left: 8504, right: 8504, top: 5668, bottom: 4252 };
+
+      const pagePr = hwpxFindAll(doc, 'pagePr')[0];
+      if (pagePr) {
+        width = parseInt(pagePr.getAttribute('width'), 10) || width;
+        height = parseInt(pagePr.getAttribute('height'), 10) || height;
+        const marginEl = hwpxFirst(pagePr, 'margin');
+        if (marginEl) {
+          m = {
+            left: parseInt(marginEl.getAttribute('left'), 10) || m.left,
+            right: parseInt(marginEl.getAttribute('right'), 10) || m.right,
+            top: parseInt(marginEl.getAttribute('top'), 10) || m.top,
+            bottom: parseInt(marginEl.getAttribute('bottom'), 10) || m.bottom
+          };
+        }
+      }
+
+      return {
+        widthMm: hwpunitToMm(width),
+        heightMm: hwpunitToMm(height),
+        marginMm: {
+          left: hwpunitToMm(m.left), right: hwpunitToMm(m.right),
+          top: hwpunitToMm(m.top), bottom: hwpunitToMm(m.bottom)
+        }
+      };
+    }
+
+    function renderHwpxSection(doc, styles) {
+      const root = doc.documentElement;
+      const page = getHwpxPageSetup(doc);
+
+      let bodyHtml = '';
+      hwpxChildren(root, 'p').forEach((p) => { bodyHtml += renderHwpxParagraph(p, styles); });
+
+      // 최상위에 p가 바로 없고 한 단계 더 감싸져 있는 구조 대비
+      if (bodyHtml === '') {
+        Array.from(root.children).forEach((child) => {
+          hwpxChildren(child, 'p').forEach((p) => { bodyHtml += renderHwpxParagraph(p, styles); });
+        });
+      }
+
+      const pg = page.marginMm;
+      return `<div class="hwpx-page" style="width:${page.widthMm.toFixed(1)}mm;min-height:${page.heightMm.toFixed(1)}mm;padding:${pg.top.toFixed(1)}mm ${pg.right.toFixed(1)}mm ${pg.bottom.toFixed(1)}mm ${pg.left.toFixed(1)}mm;">${bodyHtml}</div>`;
+    }
+
+    function renderHwpxParagraph(pEl, styles) {
+      const paraPrId = pEl.getAttribute('paraPrIDRef');
+      const paraStyle = (paraPrId !== null && styles.paraPr[paraPrId]) || { align: 'LEFT', lineSpacing: '160' };
+      const alignMap = { LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFY: 'justify', DISTRIBUTE: 'justify', BOTH: 'justify' };
+      const alignCss = alignMap[paraStyle.align] || 'left';
+      const lineHeight = (parseInt(paraStyle.lineSpacing, 10) || 160) / 100;
+
+      let innerHtml = '';
+      let hasTable = false;
+
+      hwpxChildren(pEl, 'run').forEach((run) => {
+        const charPrId = run.getAttribute('charPrIDRef');
+        const charStyle = (charPrId !== null && styles.charPr[charPrId]) || {};
+
+        const tbl = hwpxChildren(run, 'tbl')[0];
+        if (tbl) {
+          hasTable = true;
+          innerHtml += renderHwpxTable(tbl, styles);
+          return;
+        }
+
+        hwpxChildren(run, 't').forEach((t) => {
+          const raw = t.textContent || '';
+          innerHtml += wrapHwpxCharStyle(escapeXmlText(raw), charStyle);
+        });
+      });
+
+      if (hasTable) return innerHtml;
+      if (innerHtml.trim() === '') innerHtml = '&nbsp;';
+
+      return `<p style="text-align:${alignCss};line-height:${lineHeight};margin:0 0 2px 0;">${innerHtml}</p>`;
+    }
+
+    function renderHwpxTable(tblEl, styles) {
+      const rows = hwpxFindAll(tblEl, 'tr');
+      let rowsHtml = '';
+
+      rows.forEach((tr) => {
+        let cellsHtml = '';
+        hwpxChildren(tr, 'tc').forEach((tc) => {
+          const cellSpan = hwpxFirst(tc, 'cellSpan');
+          const colSpan = cellSpan ? (parseInt(cellSpan.getAttribute('colSpan'), 10) || 1) : 1;
+          const rowSpan = cellSpan ? (parseInt(cellSpan.getAttribute('rowSpan'), 10) || 1) : 1;
+
+          const borderFillId = tc.getAttribute('borderFillIDRef');
+          const bf = (borderFillId !== null && styles.borderFill[borderFillId]) || { width: '0.12mm', color: '#94a3b8' };
+          const borderCss = `border:${bf.width} solid ${bf.color};`;
+
+          let cellInner = '';
+          const subList = hwpxFirst(tc, 'subList');
+          if (subList) {
+            hwpxChildren(subList, 'p').forEach((p) => { cellInner += renderHwpxParagraph(p, styles); });
+          }
+
+          cellsHtml += `<td colspan="${colSpan}" rowspan="${rowSpan}" style="${borderCss}padding:3px 5px;vertical-align:top;">${cellInner || '&nbsp;'}</td>`;
+        });
+        rowsHtml += `<tr>${cellsHtml}</tr>`;
+      });
+
+      return `<table class="hwpx-preview-table"><tbody>${rowsHtml}</tbody></table>`;
+    }
+
+    function wrapHwpxCharStyle(text, charStyle) {
+      const size = charStyle.size || 10;
+      const bold = charStyle.bold ? 'font-weight:bold;' : '';
+      const italic = charStyle.italic ? 'font-style:italic;' : '';
+      const color = charStyle.color ? `color:${charStyle.color};` : '';
+      const fontCss = charStyle.fontFace ? `font-family:${mapHwpxFont(charStyle.fontFace)};` : '';
+      return `<span style="font-size:${size}pt;${bold}${italic}${color}${fontCss}">${text}</span>`;
+    }
+
+    function mapHwpxFont(name) {
+      const map = [
+        ['함초롬바탕', "'바탕','Batang',serif"],
+        ['함초롬돋움', "'돋움','Dotum',sans-serif"],
+        ['신명조', "'바탕','Batang',serif"],
+        ['명조', "'바탕','Batang',serif"],
+        ['고딕', "'돋움','Dotum',sans-serif"],
+        ['굴림', "'굴림','Gulim',sans-serif"]
+      ];
+      for (const [key, css] of map) {
+        if (name && name.includes(key)) return css;
+      }
+      return 'sans-serif';
+    }
+
+    function escapeXmlText(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     }
 
     function decodeHwpxText(bytes) {
