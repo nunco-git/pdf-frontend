@@ -596,8 +596,19 @@
       measurementId: "G-P70QSP1WSV"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // Firebase SDK 로드에 실패해도(네트워크 차단 등) 병합/미리보기 등 핵심 기능은
+    // 계속 동작하도록, 초기화 실패를 여기서 흡수합니다.
+    let db = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+      } else {
+        console.error('Firebase SDK 로드 실패: 배너/관리자 기능이 비활성화됩니다.');
+      }
+    } catch (err) {
+      console.error('Firebase 초기화 오류: 배너/관리자 기능이 비활성화됩니다.', err);
+    }
 
     const defaultCards = {};
     for (let i = 1; i <= 4; i++) {
@@ -636,12 +647,13 @@
     // → localStorage가 아니므로 모든 방문자에게 동일하게 반영됩니다.
     async function fetchAndRenderBanners() {
       try {
+        if (!db) throw new Error('Firestore 미초기화');
         const doc = await db.collection('settings').doc('banners').get();
         cachedCards = (doc.exists && doc.data().cards)
           ? { ...defaultCards, ...doc.data().cards }
           : { ...defaultCards };
       } catch (error) {
-        console.error('배너 데이터 불러오기 오류:', error);
+        console.error('배너 데이터 불러오기 오류(기본값으로 대체):', error);
         cachedCards = { ...defaultCards };
       }
       applyCardsToDOM(cachedCards);
@@ -663,6 +675,7 @@
       }
 
       try {
+        if (!db) { alert('배너 관리 기능을 사용할 수 없습니다 (Firebase 연결 실패).'); return; }
         const docRef = db.collection("settings").doc("admin");
         const doc = await docRef.get();
 
