@@ -8,11 +8,10 @@
   <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
-  <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -119,62 +118,17 @@
     p.sub { color: #64748b; font-size: 16px; margin-bottom: 24px; }
 
     .security-banner {
-      background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+      background-color: #f0fdf4;
       border: 1px solid #bbf7d0;
-      border-radius: 14px;
-      padding: 18px 20px;
+      border-radius: 10px;
+      padding: 16px;
       color: #166534;
       font-size: 15px;
-      font-weight: 700;
       line-height: 1.55;
       overflow-y: auto;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04), 0 1px 2px rgba(16, 24, 40, 0.03);
     }
-    .security-banner-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .security-banner-header strong { margin-bottom: 0; }
-    .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; letter-spacing: -0.2px; }
-
-    .security-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-    .security-features li {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(255, 255, 255, 0.55);
-      border: 1px solid rgba(187, 247, 208, 0.7);
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 0.83rem;
-    }
-    .security-features .feat-icon {
-      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
-      background: #16a34a; color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 13px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
-    }
-    .security-features strong { display: inline; font-size: 0.83rem; margin: 0; color: #14532d; }
-    .security-features .feat-desc { color: #15803d; font-weight: 700; }
-
-    .hwp-tool-banner {
-      margin-top: 8px;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-      border: 1px solid #ddd6fe;
-      border-radius: 10px;
-      padding: 7px 12px;
-    }
-    .hwp-tool-banner .hwp-tool-icon {
-      flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px;
-      background: #7c3aed; color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 12px; box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
-    }
-    .hwp-tool-banner .hwp-tool-body { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
-    .hwp-tool-banner .hwp-tool-text { font-size: 0.72rem; line-height: 1.3; color: #4c1d95; }
-    .hwp-tool-banner .hwp-tool-text strong { color: #5b21b6; font-size: 0.76rem; display: block; }
-    .btn-hwp-download {
-      flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
-      background: #7c3aed; color: white; text-decoration: none;
-      padding: 6px 14px; border-radius: 18px; font-size: 0.72rem; font-weight: 700;
-      white-space: nowrap; box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
-      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-hwp-download:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); }
+    .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; }
+    .security-banner ul { margin: 6px 0 0 0; padding-left: 18px; }
 
     /* 상단 20% : 하단 80% 영역 분할 */
     .top-section {
@@ -191,15 +145,25 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       text-align: center;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       padding: 10px;
     }
-    .cross-link { margin-top: 2px; font-size: 0.78rem; color: #2563eb; text-decoration: none; font-weight: 600; }
-    .cross-link:hover { text-decoration: underline; }
+    .btn-reset {
+      border: 1px solid #fca5a5;
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: bold;
+      padding: 7px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-reset:hover { background: #fee2e2; }
     .top-col-guide {
       flex: 1 1 46%;
       display: flex;
@@ -293,6 +257,7 @@
     .drag-handle { color: #94a3b8; margin-right: 2px; font-size: 14px; cursor: grab; }
     .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 12px; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
     .badge-img { background: #f59e0b; }
+    .badge-hwp { background: #ea580c; }
 
     .file-opt-row {
       display: flex;
@@ -407,6 +372,24 @@
       pointer-events: none;
     }
 
+    /* HWPX(한글) 텍스트 전용 미리보기 */
+    .preview-box.hwpx-text-mode {
+      display: block;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0;
+    }
+    .hwpx-text-preview {
+      background: #fff;
+      border-radius: 4px;
+      margin: 10px;
+      padding: 20px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1e293b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
     .btn-main {
       background-color: #2563eb;
       color: white;
@@ -419,17 +402,23 @@
       font-weight: bold;
     }
     .btn-main:hover { background-color: #1d4ed8; }
-    .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
 
-    .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
-    .btn-secondary-row { display: flex; gap: 10px; }
-    .btn-secondary { flex: 1; background-color: white; color: #2563eb; border: 1.5px solid #2563eb; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-    .btn-secondary:hover { background-color: #eff6ff; }
-    .btn-secondary:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
+    .bottom-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .bottom-btn-group .btn-main { flex: 1 1 100%; }
+    .btn-img-convert {
+      flex: 1 1 calc(50% - 5px);
+      border: 2px solid #2563eb;
+      background: white;
+      color: #2563eb;
+      padding: 14px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    .btn-img-convert:hover { background-color: #eff6ff; }
 
-    .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
-    .btn-reset:hover { background: #ef4444; color: white; }
-    .btn-reset:disabled { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; background: white; }
     #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
     .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
 
@@ -495,35 +484,24 @@
       <div class="top-section">
         <div class="top-col-title">
           <h2>📄 이지 PDF & 이미지<br>병합기, 뷰어</h2>
-          <a class="cross-link" href="https://nunco-git.github.io/excelmerge/" target="_blank" rel="noopener noreferrer">📊 엑셀 병합기 바로가기 →</a>
-          <a class="cross-link" href="https://nunco-git.github.io/hwpxmerge/" target="_blank" rel="noopener noreferrer">📝 한글(HWPX) 병합기 바로가기 →</a>
+          <button type="button" class="btn-reset" onclick="resetAll()">🔄 초기화 (첨부 파일 전체 삭제)</button>
         </div>
 
         <div class="top-col-guide">
           <div class="security-banner">
-            <div class="security-banner-header">
-              <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
-              <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
-            </div>
-            <ul class="security-features">
-              <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기 지원</strong> <span class="feat-desc">: 회전 가능, 다수의 페이지 스크롤 가능</span></span></li>
-              <li><span class="feat-icon">🖼️</span><span><strong>PDF to 이미지 변환</strong> <span class="feat-desc">: PDF 페이지당 1장의 이미지로 변환</span></span></li>
+            <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+            <ul>
+              <li><strong>외부 서버 전송 Zero:</strong> 파일 데이터는 외부 서버로 전송되지 않고, 모든 작업이 브라우저 안에서만 처리됩니다.</li>
+              <li><strong>📖 PDF 미리보기 지원:</strong> 병합하기 전, 각 PDF 파일의 모든 페이지를 스크롤하며 실시간으로 확인할 수 있습니다.</li>
+              <li><strong>📝 한글(HWPX) 미리보기 지원:</strong> 병합 없이 내용(텍스트)만 바로 확인할 수 있습니다.</li>
             </ul>
-            <div class="hwp-tool-banner">
-              <div class="hwp-tool-body">
-                <span class="hwp-tool-icon">📝</span>
-                <div class="hwp-tool-text"><strong>한글(HWP·HWPX) to PDF 일괄변환</strong>폴더 단위·복수 파일 일괄변환 프로그램</div>
-              </div>
-              <a class="btn-hwp-download" href="https://github.com/nunco-git/pdf-frontend/releases/download/hwptopdf/PDF.V1.0.exe" download>⬇ 한글toPDF 변환기 받기</a>
-            </div>
           </div>
         </div>
 
         <div class="top-col-drop">
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            📂 <strong>클릭하거나 파일(PDF, 이미지)을 이곳으로 끌어다 놓으세요</strong>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp" multiple onchange="handleFileSelect(event)" />
+            📂 <strong>클릭하거나 파일(PDF, 이미지, 한글 HWP/HWPX)을 이곳으로 끌어다 놓으세요</strong>
+            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwp, .hwpx" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
       </div>
@@ -541,12 +519,10 @@
         </div>
       </div>
 
-      <div class="action-btn-group">
-        <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
-        <div class="btn-secondary-row">
-          <button class="btn-secondary" id="img-high-btn" onclick="exportAsImages('high')" disabled>🖼️ 이미지 변환 (고화질)</button>
-          <button class="btn-secondary" id="img-low-btn" onclick="exportAsImages('low')" disabled>🖼️ 이미지 변환 (저화질)</button>
-        </div>
+      <div class="bottom-btn-group">
+        <button class="btn-main" onclick="mergeFiles()">PDF 변환 및 병합</button>
+        <button class="btn-img-convert" onclick="convertToImages('high')">🖼️ 이미지 변환 (고화질)</button>
+        <button class="btn-img-convert" onclick="convertToImages('low')">🖼️ 이미지 변환 (저화질)</button>
       </div>
       <div id="status"></div>
     </div>
@@ -640,42 +616,19 @@
       return cachedCards || defaultCards;
     }
 
-    // 안전한 http/https URL만 허용 (javascript:, data: 등 스킴 차단)
-    function sanitizeUrl(url) {
-      if (!url) return '';
-      const trimmed = String(url).trim();
-      return /^https?:\/\//i.test(trimmed) ? trimmed : '';
-    }
-
     function applyCardsToDOM(cards) {
       for (let i = 1; i <= 4; i++) {
         const cardEl = document.getElementById(`card-${i}`);
         if (!cardEl) continue;
         const data = cards[i] || defaultCards[i];
-        cardEl.innerHTML = ''; // 이전 내용 제거
 
-        const safeImg = sanitizeUrl(data.img);
-        if (safeImg) {
-          const img = document.createElement('img');
-          img.src = safeImg;
-          img.alt = 'banner';
-          cardEl.appendChild(img);
-        }
-
-        const h4 = document.createElement('h4');
-        h4.textContent = data.title || '';
-        cardEl.appendChild(h4);
-
-        const p = document.createElement('p');
-        p.textContent = data.desc || '';
-        cardEl.appendChild(p);
-
-        const a = document.createElement('a');
-        a.href = sanitizeUrl(data.link) || '#';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.textContent = data.btnText || '';
-        cardEl.appendChild(a);
+        const imgTag = data.img ? `<img src="${data.img}" alt="banner" />` : '';
+        cardEl.innerHTML = `
+          ${imgTag}
+          <h4>${data.title}</h4>
+          <p>${data.desc}</p>
+          <a href="${data.link}" target="_blank">${data.btnText}</a>
+        `;
       }
     }
 
@@ -804,20 +757,18 @@
       event.target.value = '';
     }
 
-    // 파일 확장자/MIME으로 종류를 판별한다
-    function getFileKind(file) {
-      if (file.type === 'application/pdf') return 'pdf';
-      if (file.type.startsWith('image/')) return 'image';
-      return null;
+    function getFileExt(file) {
+      const parts = file.name.toLowerCase().split('.');
+      return parts.length > 1 ? parts.pop() : '';
     }
+    function isHwpxFile(file) { return getFileExt(file) === 'hwpx'; }
+    function isHwpFile(file) { return getFileExt(file) === 'hwp'; }
 
     function addFiles(files) {
       files.forEach(file => {
-        const kind = getFileKind(file);
-        if (kind) {
+        if (file.type === 'application/pdf' || file.type.startsWith('image/') || isHwpxFile(file) || isHwpFile(file)) {
           fileList.push({
             file: file,
-            kind: kind,
             pageRange: '',
             rotation: 0
           });
@@ -829,42 +780,29 @@
       }
     }
 
-    // 첨부된 모든 파일을 목록에서 한 번에 제거 (팝업 없이 즉시 초기화)
     function resetAll() {
       if (fileList.length === 0) return;
       fileList = [];
       selectedIndex = null;
-      draggedIndex = null;
-      const fi = document.getElementById('fileInput');
-      if (fi) fi.value = '';
       renderFileList();
+      showPreview(null);
+      const statusEl = document.getElementById('status');
+      if (statusEl) statusEl.innerHTML = '';
     }
 
     function renderFileList() {
       const container = document.getElementById('fileListContainer');
-      const resetBtn = document.getElementById('reset-btn');
-      const mergeBtn = document.getElementById('merge-btn');
-      const imgHighBtn = document.getElementById('img-high-btn');
-      const imgLowBtn = document.getElementById('img-low-btn');
       container.innerHTML = '';
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
-        if (resetBtn) resetBtn.disabled = true;
-        if (mergeBtn) mergeBtn.disabled = true;
-        if (imgHighBtn) imgHighBtn.disabled = true;
-        if (imgLowBtn) imgLowBtn.disabled = true;
         showPreview(null);
         return;
       }
-      if (resetBtn) resetBtn.disabled = false;
-      if (mergeBtn) mergeBtn.disabled = false;
-      if (imgHighBtn) imgHighBtn.disabled = false;
-      if (imgLowBtn) imgLowBtn.disabled = false;
 
       fileList.forEach((itemData, index) => {
         const file = itemData.file;
-        const kind = itemData.kind || getFileKind(file);
-        const isImage = kind === 'image';
+        const isImage = file.type.startsWith('image/');
+        const isPreviewOnly = isHwpxFile(file) || isHwpFile(file);
 
         const itemEl = document.createElement('div');
         itemEl.className = `file-item ${selectedIndex === index ? 'selected' : ''}`;
@@ -906,7 +844,7 @@
           <div class="file-main-row">
             <div class="file-info">
               <span class="drag-handle">☰</span>
-              <span class="${isImage ? 'badge badge-img' : 'badge'}">${index + 1}</span>
+              <span class="${isPreviewOnly ? 'badge badge-hwp' : (isImage ? 'badge badge-img' : 'badge')}">${index + 1}</span>
               <span title="${file.name}">${file.name}</span>
             </div>
             <div class="btn-group">
@@ -914,12 +852,15 @@
             </div>
           </div>
           <div class="file-opt-row">
-            ${!isImage ? `
+            ${isPreviewOnly ? `
+              <div class="opt-field"><span style="color:#c2410c;">📝 미리보기 전용 (병합·변환 대상 제외)</span></div>
+            ` : !isImage ? `
               <div class="opt-field">
                 <label>추출:</label>
                 <input type="text" placeholder="예: 1-3" value="${itemData.pageRange}" oninput="updateItemOption(${index}, 'pageRange', this.value)" />
               </div>
             ` : '<div class="opt-field"><span style="color:#94a3b8;">이미지 전체</span></div>'}
+            ${!isPreviewOnly ? `
             <div class="opt-field" style="max-width: 110px;">
               <label>회전:</label>
               <select onchange="updateItemOption(${index}, 'rotation', parseInt(this.value))">
@@ -929,6 +870,7 @@
                 <option value="270" ${itemData.rotation === 270 ? 'selected' : ''}>270도</option>
               </select>
             </div>
+            ` : ''}
           </div>
         `;
         container.appendChild(itemEl);
@@ -969,7 +911,7 @@
     async function showPreview(itemData) {
       const previewBox = document.getElementById('previewBox');
       previewBox.innerHTML = '';
-      previewBox.classList.remove('pdf-scroll-mode');
+      previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
 
       if (!itemData) {
         previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>';
@@ -977,9 +919,8 @@
       }
 
       const file = itemData.file;
-      const kind = itemData.kind || getFileKind(file);
 
-      if (kind === 'image') {
+      if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
           const img = document.createElement('img');
@@ -1060,7 +1001,90 @@
           console.error("미리보기 로드 오류:", err);
           previewBox.innerHTML = '<div class="preview-placeholder">미리보기를 불러올 수 없습니다.</div>';
         }
+      } else if (isHwpxFile(file)) {
+        await showHwpxPreview(file, previewBox);
+      } else if (isHwpFile(file)) {
+        previewBox.innerHTML = '<div class="preview-placeholder">HWP(구 버전) 파일은<br>현재 미리보기를 지원하지 않습니다.<br>HWPX 형식으로 저장 후 이용해 주세요.</div>';
       }
+    }
+
+    // HWPX(ZIP+XML) 문서 텍스트 미리보기
+    async function showHwpxPreview(file, previewBox) {
+      previewBox.classList.add('hwpx-text-mode');
+      previewBox.innerHTML = '<div class="preview-placeholder">한글 파일을 불러오는 중...</div>';
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+
+        // 1) 한글 프로그램이 자동 생성하는 미리보기 텍스트 스트림을 우선 사용
+        const previewEntries = zip.file(/Preview\/PrvText\.txt$/i);
+        let text = '';
+
+        if (previewEntries && previewEntries.length > 0) {
+          const bytes = await previewEntries[0].async('uint8array');
+          text = decodeHwpxText(bytes);
+        }
+
+        // 2) 없으면 본문 section XML에서 태그를 제거해 텍스트만 추출 (서식 없음)
+        if (!text || text.trim() === '') {
+          const sectionNames = Object.keys(zip.files)
+            .filter(name => /Contents\/section\d+\.xml$/i.test(name))
+            .sort();
+          let combined = '';
+          for (const name of sectionNames) {
+            const xml = await zip.file(name).async('string');
+            combined += xmlToPlainText(xml) + '\n\n';
+          }
+          text = combined.trim();
+        }
+
+        if (!text || text.trim() === '') {
+          previewBox.innerHTML = '<div class="preview-placeholder">본문 내용을 추출하지 못했습니다.<br>(암호화되었거나 지원되지 않는 구조일 수 있습니다)</div>';
+          return;
+        }
+
+        previewBox.innerHTML = `<div class="hwpx-text-preview">${escapeHtmlForPreview(text)}</div>`;
+      } catch (err) {
+        console.error('HWPX 미리보기 오류:', err);
+        previewBox.innerHTML = '<div class="preview-placeholder">한글 파일 미리보기를 불러올 수 없습니다.</div>';
+      }
+    }
+
+    function decodeHwpxText(bytes) {
+      try {
+        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          return new TextDecoder('utf-16le').decode(bytes.slice(2));
+        }
+        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          return new TextDecoder('utf-16be').decode(bytes.slice(2));
+        }
+        const decoded = new TextDecoder('utf-16le').decode(bytes);
+        if (/\uFFFD/.test(decoded)) {
+          return new TextDecoder('utf-8').decode(bytes);
+        }
+        return decoded;
+      } catch (e) {
+        return new TextDecoder('utf-8').decode(bytes);
+      }
+    }
+
+    function xmlToPlainText(xml) {
+      return xml
+        .replace(/<[^>]+>/g, '\n')
+        .replace(/\n{2,}/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    function escapeHtmlForPreview(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
 
     async function renderPdfPage(pdf, wrap, itemData) {
@@ -1146,10 +1170,8 @@
         for (let i = 0; i < fileList.length; i++) {
           const itemData = fileList[i];
           const file = itemData.file;
-          const kind = itemData.kind || getFileKind(file);
-          statusDiv.innerText = `⚡ 안전하게 병합 작업 중... (${i + 1}/${fileList.length})`;
 
-          if (kind === 'pdf') {
+          if (file.type === 'application/pdf') {
             const fileBytes = await file.arrayBuffer();
             const pdf = await PDFLib.PDFDocument.load(fileBytes);
             const totalPages = pdf.getPageCount();
@@ -1181,7 +1203,7 @@
               mergedPdf.addPage(page);
             });
 
-          } else if (kind === 'image') {
+          } else if (file.type.startsWith('image/')) {
             const pngBytes = await convertImageToPngBytes(file);
             const embeddedImage = await mergedPdf.embedPng(pngBytes);
             const page = mergedPdf.addPage([595.28, 841.89]);
@@ -1219,144 +1241,122 @@
       }
     }
 
-    // 5. 이미지 변환 - PDF는 2쪽이 넘어가도 한 장으로 합쳐지지 않고 1쪽씩 개별 이미지로 변환된다.
-    //    quality: 'high' → 고해상도 PNG(무손실), 'low' → 저해상도 JPEG(용량 절감)
-    async function exportAsImages(quality) {
+    // 5. PDF/이미지 → 이미지 파일 변환 (PDF는 페이지마다 1장씩 이미지로 변환)
+    async function convertToImages(quality) {
       const statusDiv = document.getElementById('status');
       if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
 
       const isHigh = quality === 'high';
-      const renderScale = isHigh ? 2.5 : 1.0;      // pdf.js 렌더링 배율 (기본 72dpi 기준)
-      const outputFormat = isHigh ? 'image/png' : 'image/jpeg';
-      const outputExt = isHigh ? 'png' : 'jpg';
-      const jpegQuality = 0.6; // low일 때만 사용
+      const scale = isHigh ? 3 : 1.2;
+      const mimeType = isHigh ? 'image/png' : 'image/jpeg';
+      const ext = isHigh ? 'png' : 'jpg';
+      const jpegQuality = 0.7;
 
-      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn')];
-      buttons.forEach(b => { if (b) b.disabled = true; });
+      statusDiv.innerText = `⚡ 이미지로 변환 중 (${isHigh ? '고화질' : '저화질'})...`;
       statusDiv.style.color = '#2563eb';
 
-      function canvasToBlob(canvas) {
-        return new Promise(resolve => {
-          if (isHigh) canvas.toBlob(resolve, outputFormat);
-          else canvas.toBlob(resolve, outputFormat, jpegQuality);
-        });
-      }
-
-      // 회전을 반영해 <img> 원본을 캔버스에 그린다.
-      async function renderImageFileToCanvas(file, rotationDeg) {
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-        const img = await new Promise((resolve) => {
-          const el = new Image();
-          el.onload = () => resolve(el);
-          el.src = dataUrl;
-        });
-        const swap = (rotationDeg === 90 || rotationDeg === 270);
+      // 회전값을 반영해 캔버스에 그리는 공통 헬퍼
+      function drawRotated(sourceCanvasOrImg, srcWidth, srcHeight, rotation, drawFn) {
         const canvas = document.createElement('canvas');
-        canvas.width = swap ? img.height : img.width;
-        canvas.height = swap ? img.width : img.height;
+        const swapped = (rotation === 90 || rotation === 270);
+        canvas.width = swapped ? srcHeight : srcWidth;
+        canvas.height = swapped ? srcWidth : srcHeight;
         const ctx = canvas.getContext('2d');
+        ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((rotationDeg || 0) * Math.PI / 180);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.translate(-srcWidth / 2, -srcHeight / 2);
+        drawFn(ctx);
+        ctx.restore();
         return canvas;
       }
 
       try {
-        // 1) 병합 순서 그대로, PDF는 페이지 단위로 풀어서 "작업 목록"을 먼저 만든다.
-        const jobs = []; // { type:'image'|'pdfpage', file, rotation, pdf?, pageIndex? }
-        for (const itemData of fileList) {
-          const file = itemData.file;
-          const kind = itemData.kind || getFileKind(file);
-          const baseName = file.name.replace(/\.[^.]+$/, '');
+        const outputs = []; // { name, blob }
 
-          if (kind === 'image') {
-            jobs.push({ type: 'image', file, rotation: itemData.rotation || 0, baseName });
-          } else if (kind === 'pdf') {
+        for (let i = 0; i < fileList.length; i++) {
+          const itemData = fileList[i];
+          const file = itemData.file;
+          const rotation = itemData.rotation || 0;
+          const baseName = file.name.replace(/\.[^/.]+$/, '');
+          const prefix = String(i + 1).padStart(2, '0');
+
+          if (file.type === 'application/pdf') {
             const fileBytes = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
-            const totalPages = pdf.numPages;
 
-            let pageNums = [];
-            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
-              itemData.pageRange.split(',').forEach(part => {
-                if (part.includes('-')) {
-                  const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
-                  for (let p = start; p <= end; p++) if (p >= 1 && p <= totalPages) pageNums.push(p);
-                } else {
-                  const p = parseInt(part.trim(), 10);
-                  if (p >= 1 && p <= totalPages) pageNums.push(p);
-                }
-              });
-            } else {
-              pageNums = Array.from({ length: totalPages }, (_, i) => i + 1);
+            for (let p = 1; p <= pdf.numPages; p++) {
+              const page = await pdf.getPage(p);
+              const viewport = page.getViewport({ scale });
+
+              const renderCanvas = document.createElement('canvas');
+              renderCanvas.width = viewport.width;
+              renderCanvas.height = viewport.height;
+              await page.render({ canvasContext: renderCanvas.getContext('2d'), viewport }).promise;
+
+              const finalCanvas = rotation
+                ? drawRotated(renderCanvas, viewport.width, viewport.height, rotation, (ctx) => ctx.drawImage(renderCanvas, 0, 0))
+                : renderCanvas;
+
+              const blob = await new Promise((resolve) => finalCanvas.toBlob(resolve, mimeType, isHigh ? undefined : jpegQuality));
+              const pageLabel = pdf.numPages > 1 ? `_${String(p).padStart(2, '0')}` : '';
+              outputs.push({ name: `${prefix}_${baseName}${pageLabel}.${ext}`, blob });
             }
-
-            pageNums.forEach((pageNum, idx) => {
-              jobs.push({ type: 'pdfpage', pdf, pageIndex: pageNum, rotation: itemData.rotation || 0, baseName, multiPage: pageNums.length > 1, pageOrdinal: idx + 1 });
+          } else if (file.type.startsWith('image/')) {
+            const dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.readAsDataURL(file);
             });
+            const img = await new Promise((resolve) => {
+              const im = new Image();
+              im.onload = () => resolve(im);
+              im.src = dataUrl;
+            });
+
+            const finalCanvas = rotation
+              ? drawRotated(img, img.width, img.height, rotation, (ctx) => ctx.drawImage(img, 0, 0))
+              : (() => {
+                  const c = document.createElement('canvas');
+                  c.width = img.width; c.height = img.height;
+                  c.getContext('2d').drawImage(img, 0, 0);
+                  return c;
+                })();
+
+            const blob = await new Promise((resolve) => finalCanvas.toBlob(resolve, mimeType, isHigh ? undefined : jpegQuality));
+            outputs.push({ name: `${prefix}_${baseName}.${ext}`, blob });
           }
         }
 
-        if (jobs.length === 0) { alert('변환할 페이지가 없습니다.'); return; }
-
-        // 2) 작업 목록을 순서대로 렌더링해 이미지 blob으로 만든다.
-        const outputs = []; // { filename, blob }
-        for (let i = 0; i < jobs.length; i++) {
-          const job = jobs[i];
-          statusDiv.innerText = `⚡ 이미지 변환 중... (${i + 1}/${jobs.length})`;
-
-          let canvas;
-          if (job.type === 'image') {
-            canvas = await renderImageFileToCanvas(job.file, job.rotation);
-          } else {
-            const page = await job.pdf.getPage(job.pageIndex);
-            const viewport = page.getViewport({ scale: renderScale, rotation: job.rotation });
-            canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-          }
-
-          const blob = await canvasToBlob(canvas);
-          const pageSuffix = job.type === 'pdfpage' && job.multiPage ? `_p${String(job.pageOrdinal).padStart(2, '0')}` : '';
-          const seq = String(i + 1).padStart(3, '0');
-          outputs.push({ filename: `${seq}_${job.baseName}${pageSuffix}.${outputExt}`, blob });
+        if (outputs.length === 0) {
+          statusDiv.innerText = '❌ 변환할 파일이 없습니다.';
+          statusDiv.style.color = '#ef4444';
+          return;
         }
 
-        // 3) 결과가 1장이면 이미지 파일 그대로, 여러 장이면 zip으로 묶어서 다운로드한다.
-        const qualityLabel = isHigh ? '고화질' : '저화질';
         if (outputs.length === 1) {
           const url = URL.createObjectURL(outputs[0].blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = outputs[0].filename;
+          a.download = outputs[0].name;
           a.click();
-          URL.revokeObjectURL(url);
         } else {
           const zip = new JSZip();
-          outputs.forEach(o => zip.file(o.filename, o.blob));
+          outputs.forEach((o) => zip.file(o.name, o.blob));
           const zipBlob = await zip.generateAsync({ type: 'blob' });
           const url = URL.createObjectURL(zipBlob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `이미지_변환_결과(${qualityLabel}).zip`;
+          a.download = `이미지_변환_${isHigh ? '고화질' : '저화질'}.zip`;
           a.click();
-          URL.revokeObjectURL(url);
         }
 
-        statusDiv.innerText = `✅ 총 ${outputs.length}장의 이미지(${qualityLabel})로 변환되었습니다!`;
+        statusDiv.innerText = `✅ 이미지 변환 완료! (총 ${outputs.length}개 파일)`;
         statusDiv.style.color = '#166534';
       } catch (err) {
-        console.error('이미지 변환 중 오류 발생:', err);
+        console.error("이미지 변환 중 오류 발생:", err);
         statusDiv.innerText = '❌ 이미지 변환 중 오류가 발생했습니다.';
         statusDiv.style.color = '#ef4444';
-      } finally {
-        buttons.forEach(b => { if (b) b.disabled = false; });
       }
     }
   </script>
