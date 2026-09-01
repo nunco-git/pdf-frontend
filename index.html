@@ -527,10 +527,18 @@
     .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
 
     .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
+    .main-btn-row { display: flex; gap: 10px; align-items: stretch; }
+    .main-btn-row .btn-main { flex: 2; width: auto; }
+    .main-btn-row .btn-compress { flex: 1; width: auto; }
     .btn-secondary-row { display: flex; gap: 10px; }
     .btn-secondary { flex: 1; background-color: white; color: #2563eb; border: 1.5px solid #2563eb; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
     .btn-secondary:hover { background-color: #eff6ff; }
     .btn-secondary:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
+
+    .btn-compress { background-color: #fff7ed; color: #c2410c; border: 1.5px solid #ea580c; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+    .btn-compress:hover { background-color: #ffedd5; }
+    .btn-compress:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
+    .compress-note { font-size: 11.5px; color: #94a3b8; margin-top: -2px; text-align: center; }
 
     .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
     .btn-reset:hover { background: #ef4444; color: white; }
@@ -596,6 +604,8 @@
       .file-select-box { padding: 16px; }
       .file-select-box strong { font-size: 14px; }
       .btn-secondary-row { flex-direction: column; }
+      .main-btn-row { flex-direction: column; }
+      .main-btn-row .btn-main, .main-btn-row .btn-compress { flex: 1; }
       .file-info { max-width: 55vw; }
       .opt-field { min-width: 90px; }
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
@@ -670,7 +680,11 @@
       </div>
 
       <div class="action-btn-group">
-        <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
+        <div class="main-btn-row">
+          <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
+          <button class="btn-compress" id="compress-btn" onclick="mergeFilesCompressed()" disabled>🗜️ 최대 압축 병합</button>
+        </div>
+        <div class="compress-note">최대 압축 병합: 모든 페이지를 저해상도 이미지로 다시 찍어 압축합니다 — 글자를 선택·검색할 수 없게 됩니다.</div>
         <div class="btn-secondary-row">
           <button class="btn-secondary" id="img-high-btn" onclick="exportAsImages('high')" disabled>🖼️ 이미지 변환 (고화질)</button>
           <button class="btn-secondary" id="img-low-btn" onclick="exportAsImages('low')" disabled>🖼️ 이미지 변환 (저화질)</button>
@@ -1082,6 +1096,7 @@
       const mergeBtn = document.getElementById('merge-btn');
       const imgHighBtn = document.getElementById('img-high-btn');
       const imgLowBtn = document.getElementById('img-low-btn');
+      const compressBtn = document.getElementById('compress-btn');
       container.innerHTML = '';
       if (fileList.length === 0) {
         container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
@@ -1089,6 +1104,7 @@
         if (mergeBtn) mergeBtn.disabled = true;
         if (imgHighBtn) imgHighBtn.disabled = true;
         if (imgLowBtn) imgLowBtn.disabled = true;
+        if (compressBtn) compressBtn.disabled = true;
         showPreview(null);
         return;
       }
@@ -1096,6 +1112,7 @@
       if (mergeBtn) mergeBtn.disabled = false;
       if (imgHighBtn) imgHighBtn.disabled = false;
       if (imgLowBtn) imgLowBtn.disabled = false;
+      if (compressBtn) compressBtn.disabled = false;
 
       fileList.forEach((itemData, index) => {
         const file = itemData.file;
@@ -1797,7 +1814,7 @@
       const outputExt = isHigh ? 'png' : 'jpg';
       const jpegQuality = 0.6; // low일 때만 사용
 
-      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn')];
+      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn'), document.getElementById('compress-btn')];
       buttons.forEach(b => { if (b) b.disabled = true; });
       statusDiv.style.color = '#2563eb';
 
@@ -1920,6 +1937,151 @@
       } catch (err) {
         console.error('이미지 변환 중 오류 발생:', err);
         statusDiv.innerText = '❌ 이미지 변환 중 오류가 발생했습니다.';
+        statusDiv.style.color = '#ef4444';
+      } finally {
+        buttons.forEach(b => { if (b) b.disabled = false; });
+      }
+    }
+
+    // 6. 최대 압축 병합 — 모든 페이지를 저해상도 JPEG로 다시 찍어(래스터화) PDF로
+    //    재조립한다. 원본 PDF에 이미 들어있는 고해상도 이미지/폰트 데이터를 그대로
+    //    복사하는 mergeFiles()와 달리, 화면마다 새로 낮은 해상도로 렌더링해서 용량을
+    //    최대한 줄인다. 단, 결과물의 글자는 더 이상 선택/검색되지 않는 이미지가 된다.
+    async function mergeFilesCompressed() {
+      const statusDiv = document.getElementById('status');
+      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
+
+      const renderScale = 1.0;   // 압축 우선이라 낮은 해상도로 렌더링 (약 72dpi)
+      const jpegQuality = 0.35;  // 공격적인 압축률
+      const maxImageDim = 1200;  // 순수 이미지 파일은 긴 변 기준 최대 픽셀까지만 유지
+
+      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn'), document.getElementById('compress-btn')];
+      buttons.forEach(b => { if (b) b.disabled = true; });
+      statusDiv.style.color = '#2563eb';
+
+      function canvasToJpegBytes(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob(async (blob) => {
+            if (!blob) { reject(new Error('이미지 인코딩 실패')); return; }
+            resolve(new Uint8Array(await blob.arrayBuffer()));
+          }, 'image/jpeg', jpegQuality);
+        });
+      }
+
+      try {
+        // 1) 병합 순서 그대로, PDF는 페이지 단위로 풀어서 작업 목록을 만든다.
+        const jobs = [];
+        for (const itemData of fileList) {
+          const file = itemData.file;
+          const kind = itemData.kind || getFileKind(file);
+
+          if (kind === 'image') {
+            jobs.push({ type: 'image', file, rotation: itemData.rotation || 0 });
+          } else if (kind === 'pdf') {
+            const fileBytes = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
+            const totalPagesInFile = pdf.numPages;
+
+            let pageNums = [];
+            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
+              itemData.pageRange.split(',').forEach(part => {
+                if (part.includes('-')) {
+                  const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
+                  for (let p = start; p <= end; p++) if (p >= 1 && p <= totalPagesInFile) pageNums.push(p);
+                } else {
+                  const p = parseInt(part.trim(), 10);
+                  if (p >= 1 && p <= totalPagesInFile) pageNums.push(p);
+                }
+              });
+            } else {
+              pageNums = Array.from({ length: totalPagesInFile }, (_, i) => i + 1);
+            }
+            pageNums.forEach(pageNum => jobs.push({ type: 'pdfpage', pdf, pageIndex: pageNum, rotation: itemData.rotation || 0 }));
+          }
+        }
+
+        if (jobs.length === 0) { alert('병합할 페이지가 없습니다.'); return; }
+
+        // 2) 작업 목록을 순서대로 낮은 해상도 JPEG로 렌더링해서 새 PDF에 한 쪽씩 추가한다.
+        const mergedPdf = await PDFLib.PDFDocument.create();
+
+        for (let i = 0; i < jobs.length; i++) {
+          const job = jobs[i];
+          statusDiv.innerText = `⚡ 최대 압축 병합 중... (${i + 1}/${jobs.length})`;
+
+          if (job.type === 'pdfpage') {
+            const page = await job.pdf.getPage(job.pageIndex);
+            const viewport = page.getViewport({ scale: renderScale, rotation: job.rotation });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const jpegBytes = await canvasToJpegBytes(canvas);
+            const embedded = await mergedPdf.embedJpg(jpegBytes);
+            const pageWidthPt = viewport.width / renderScale;
+            const pageHeightPt = viewport.height / renderScale;
+            const outPage = mergedPdf.addPage([pageWidthPt, pageHeightPt]);
+            outPage.drawImage(embedded, { x: 0, y: 0, width: pageWidthPt, height: pageHeightPt });
+          } else {
+            // 이미지 파일: 회전 반영 + 긴 변 기준 다운스케일 후 A4 용지에 맞춰 삽입
+            const dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.readAsDataURL(job.file);
+            });
+            const img = await new Promise((resolve) => {
+              const el = new Image();
+              el.onload = () => resolve(el);
+              el.src = dataUrl;
+            });
+
+            const swap = (job.rotation === 90 || job.rotation === 270);
+            const naturalW = swap ? img.height : img.width;
+            const naturalH = swap ? img.width : img.height;
+            const scaleDown = Math.min(1, maxImageDim / Math.max(naturalW, naturalH));
+            const outW = Math.max(1, Math.round(naturalW * scaleDown));
+            const outH = Math.max(1, Math.round(naturalH * scaleDown));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outW;
+            canvas.height = outH;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate((job.rotation || 0) * Math.PI / 180);
+            ctx.scale(scaleDown, scaleDown);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+            const jpegBytes = await canvasToJpegBytes(canvas);
+            const embedded = await mergedPdf.embedJpg(jpegBytes);
+            const outPage = mergedPdf.addPage([595.28, 841.89]); // A4
+            const { width, height } = outPage.getSize();
+            const imgDims = embedded.scaleToFit(width - 40, height - 40);
+            outPage.drawImage(embedded, {
+              x: (width - imgDims.width) / 2,
+              y: (height - imgDims.height) / 2,
+              width: imgDims.width,
+              height: imgDims.height,
+            });
+          }
+        }
+
+        const finalPdfBytes = await mergedPdf.save({ useObjectStreams: true });
+        const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = '통합_최대압축본.pdf';
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
+
+        const sizeKB = (finalPdfBytes.length / 1024).toFixed(0);
+        statusDiv.innerText = `✅ 최대 압축 병합 완료! (총 ${jobs.length}쪽, 약 ${sizeKB}KB)`;
+        statusDiv.style.color = '#166534';
+      } catch (err) {
+        console.error('최대 압축 병합 중 오류 발생:', err);
+        statusDiv.innerText = '❌ 최대 압축 병합 중 오류가 발생했습니다.';
         statusDiv.style.color = '#ef4444';
       } finally {
         buttons.forEach(b => { if (b) b.disabled = false; });
