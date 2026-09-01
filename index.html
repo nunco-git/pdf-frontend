@@ -14,10 +14,6 @@
   <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
   <style>
     * { box-sizing: border-box; }
     body {
@@ -35,71 +31,13 @@
 
     .app-container {
       display: grid;
-      grid-template-columns: 220px 1fr;
+      grid-template-columns: 1fr;
       gap: 30px;
       max-width: 1900px;
       width: 100%;
       margin: 0 auto;
       align-items: start;
     }
-
-    .sidebar {
-      width: 220px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .banner-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .banner-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    }
-    .banner-card img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      background-color: #f8fafc;
-    }
-    .banner-card h4 {
-      margin: 6px 0 4px 0;
-      font-size: 16px;
-      color: #1e293b;
-      word-break: keep-all;
-    }
-    .banner-card p {
-      font-size: 14px;
-      color: #64748b;
-      margin: 0 0 10px 0;
-      line-height: 1.4;
-      word-break: keep-all;
-    }
-    .banner-card a {
-      display: inline-block;
-      width: 100%;
-      padding: 8px 0;
-      background-color: #f1f5f9;
-      color: #2563eb;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: bold;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .banner-card a:hover { background-color: #e2e8f0; }
 
     .main-content {
       width: 100%;
@@ -219,8 +157,6 @@
       background-clip: text;
       color: transparent;
     }
-    .cross-link { margin-top: 2px; font-size: 0.78rem; color: #2563eb; text-decoration: none; font-weight: 600; }
-    .cross-link:hover { text-decoration: underline; }
     .top-col-guide {
       flex: 1 1 46%;
       display: flex;
@@ -556,41 +492,8 @@
     #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
     .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
 
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: white;
-      padding: 28px;
-      border-radius: 14px;
-      width: min(480px, 92vw);
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    .modal-content h3 { margin-top: 0; font-size: 20px; }
-    .input-group { margin-bottom: 14px; text-align: left; }
-    .input-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 6px; color: #334155; }
-    .input-group input, .input-group textarea, .input-group select {
-      width: 100%;
-      padding: 10px;
-      font-size: 15px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-    }
-    .modal-btns { display: flex; gap: 10px; margin-top: 24px; }
-    .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; }
-    .btn-save { background: #2563eb; color: white; }
-    .btn-close { background: #e2e8f0; color: #334155; }
-
     @media (max-width: 1180px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
-      .sidebar { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(4, 1fr); }
       .main-content { min-height: auto; }
       .top-section { flex-direction: column; flex-basis: auto; height: auto; }
       .top-col-title, .top-col-guide, .top-col-drop { flex-basis: auto; width: 100%; min-width: 0; }
@@ -600,7 +503,6 @@
       .preview-panel { height: 440px; }
     }
     @media (max-width: 640px) {
-      .sidebar { grid-template-columns: repeat(2, 1fr); }
       .main-content { padding: 20px; border-radius: 12px; }
       .top-col-title h2 { font-size: 24px; }
       .top-col-title .title-kr { font-size: 15px; }
@@ -628,19 +530,10 @@
 <body>
 
   <div class="app-container">
-    <div class="sidebar">
-      <div class="banner-card" id="card-1"></div>
-      <div class="banner-card" id="card-2"></div>
-      <div class="banner-card" id="card-3"></div>
-      <div class="banner-card" id="card-4"></div>
-    </div>
-
     <div class="main-content">
       <div class="top-section">
         <div class="top-col-title">
           <h2><span class="title-en">Ez Pdf Merger</span><br><span class="title-kr">(이지 피디에프 병합기)</span></h2>
-          <a class="cross-link" href="https://nunco-git.github.io/excelmerge/" target="_blank" rel="noopener noreferrer">📊 엑셀 병합기 바로가기 →</a>
-          <a class="cross-link" href="https://nunco-git.github.io/hwpxmerge/" target="_blank" rel="noopener noreferrer">📝 한글(HWPX) 병합기 바로가기 →</a>
         </div>
 
         <div class="top-col-guide">
@@ -708,51 +601,6 @@
     </div>
   </div>
 
-  <div class="modal" id="adminModal">
-    <div class="modal-content">
-      <h3>⚙️ 좌측 배너 수시 편집 (총 4개)</h3>
-      <div class="input-group">
-        <label>편집할 카드 위치 선택</label>
-        <select id="editCardSelect" onchange="loadCardDataToForm()">
-          <option value="1">1번 카드 (상단)</option>
-          <option value="2">2번 카드</option>
-          <option value="3">3번 카드</option>
-          <option value="4">4번 카드 (하단)</option>
-        </select>
-      </div>
-
-      <div class="input-group">
-        <label>제목</label>
-        <input type="text" id="editTitle" placeholder="예: 주요 공지사항" />
-      </div>
-
-      <div class="input-group">
-        <label>설명 문구</label>
-        <textarea id="editDesc" rows="2" placeholder="예: 관련 링크를 클릭하세요."></textarea>
-      </div>
-
-      <div class="input-group">
-        <label>이미지 URL</label>
-        <input type="text" id="editImgUrl" placeholder="https://example.com/banner.png" />
-      </div>
-
-      <div class="input-group">
-        <label>이동할 링크 (URL)</label>
-        <input type="text" id="editLinkUrl" placeholder="https://example.com" />
-      </div>
-
-      <div class="input-group">
-        <label>링크 버튼 이름</label>
-        <input type="text" id="editBtnText" placeholder="예: 바로가기" />
-      </div>
-
-      <div class="modal-btns">
-        <button class="btn-save" onclick="saveCardData()">저장하기</button>
-        <button class="btn-close" onclick="closeAdminModal()">닫기</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     // 1. 보안 설정: 소스보기 및 개발자도구 방지
     document.addEventListener('contextmenu', e => e.preventDefault());
@@ -764,165 +612,6 @@
         return false;
       }
     });
-
-    // 2. 파이어베이스 및 사이드바 배너 연동
-    const firebaseConfig = {
-      apiKey: "AIzaSyB1KB8TojybTREGiKJJukmgcGgtDTbZodA",
-      authDomain: "ezpdfmerger.firebaseapp.com",
-      projectId: "ezpdfmerger",
-      storageBucket: "ezpdfmerger.firebasestorage.app",
-      messagingSenderId: "613693021673",
-      appId: "1:613693021673:web:41982b69c1e70692e83f78",
-      measurementId: "G-P70QSP1WSV"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    const defaultCards = {};
-    for (let i = 1; i <= 4; i++) {
-      defaultCards[i] = {
-        title: `알림 배너 ${i}`,
-        desc: `클릭하면 해당 링크로 바로 연결됩니다.`,
-        img: "",
-        link: "#",
-        btnText: "자세히 보기"
-      };
-    }
-
-    let cachedCards = null; // Firestore에서 불러온 배너 데이터 캐시
-
-    function getCardData() {
-      return cachedCards || defaultCards;
-    }
-
-    // 안전한 http/https URL만 허용 (javascript:, data: 등 스킴 차단)
-    function sanitizeUrl(url) {
-      if (!url) return '';
-      const trimmed = String(url).trim();
-      return /^https?:\/\//i.test(trimmed) ? trimmed : '';
-    }
-
-    function applyCardsToDOM(cards) {
-      for (let i = 1; i <= 4; i++) {
-        const cardEl = document.getElementById(`card-${i}`);
-        if (!cardEl) continue;
-        const data = cards[i] || defaultCards[i];
-        cardEl.innerHTML = ''; // 이전 내용 제거
-
-        const safeImg = sanitizeUrl(data.img);
-        if (safeImg) {
-          const img = document.createElement('img');
-          img.src = safeImg;
-          img.alt = 'banner';
-          cardEl.appendChild(img);
-        }
-
-        const h4 = document.createElement('h4');
-        h4.textContent = data.title || '';
-        cardEl.appendChild(h4);
-
-        const p = document.createElement('p');
-        p.textContent = data.desc || '';
-        cardEl.appendChild(p);
-
-        const a = document.createElement('a');
-        a.href = sanitizeUrl(data.link) || '#';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.textContent = data.btnText || '';
-        cardEl.appendChild(a);
-      }
-    }
-
-    // Firestore(settings/banners 문서)에서 배너 데이터를 불러와 화면에 표시
-    // → localStorage가 아니므로 모든 방문자에게 동일하게 반영됩니다.
-    async function fetchAndRenderBanners() {
-      try {
-        const doc = await db.collection('settings').doc('banners').get();
-        cachedCards = (doc.exists && doc.data().cards)
-          ? { ...defaultCards, ...doc.data().cards }
-          : { ...defaultCards };
-      } catch (error) {
-        console.error('배너 데이터 불러오기 오류:', error);
-        cachedCards = { ...defaultCards };
-      }
-      applyCardsToDOM(cachedCards);
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      await fetchAndRenderBanners();
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('admin') === 'true') {
-        openAdminModal();
-      }
-    });
-
-    async function openAdminModal() {
-      const inputPw = prompt("편집 권한 비밀번호를 입력하세요.");
-      if (!inputPw) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return;
-      }
-
-      try {
-        const docRef = db.collection("settings").doc("admin");
-        const doc = await docRef.get();
-
-        if (doc.exists && doc.data().password === inputPw) {
-          document.getElementById('adminModal').style.display = 'flex';
-          loadCardDataToForm();
-        } else {
-          alert("비밀번호가 올바르지 않습니다.");
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      } catch (error) {
-        console.error("인증 오류:", error);
-        alert("비밀번호 검증 중 오류가 발생했습니다.");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-
-    function closeAdminModal() {
-      document.getElementById('adminModal').style.display = 'none';
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    function loadCardDataToForm() {
-      const id = document.getElementById('editCardSelect').value;
-      const cards = getCardData();
-      const data = cards[id] || defaultCards[id];
-
-      document.getElementById('editTitle').value = data.title;
-      document.getElementById('editDesc').value = data.desc;
-      document.getElementById('editImgUrl').value = data.img;
-      document.getElementById('editLinkUrl').value = data.link;
-      document.getElementById('editBtnText').value = data.btnText;
-    }
-
-    async function saveCardData() {
-      const id = document.getElementById('editCardSelect').value;
-      const cards = { ...getCardData() };
-
-      cards[id] = {
-        title: document.getElementById('editTitle').value,
-        desc: document.getElementById('editDesc').value,
-        img: document.getElementById('editImgUrl').value,
-        link: document.getElementById('editLinkUrl').value,
-        btnText: document.getElementById('editBtnText').value
-      };
-
-      try {
-        // Firestore에 저장 → 모든 방문자의 화면에 공통으로 반영됩니다.
-        await db.collection('settings').doc('banners').set({ cards }, { merge: true });
-        cachedCards = cards;
-        applyCardsToDOM(cachedCards);
-        alert(`${id}번 배너 카드가 저장되었습니다! (모든 방문자에게 반영됩니다)`);
-      } catch (error) {
-        console.error('배너 저장 오류:', error);
-        alert('저장 중 오류가 발생했습니다. Firestore 쓰기 권한(보안 규칙)을 확인해주세요.');
-      }
-    }
 
     // 3. 파일 관련 처리 로직
     let fileList = [];
