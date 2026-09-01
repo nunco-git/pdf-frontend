@@ -527,6 +527,16 @@
     .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
 
     .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
+    .output-name-row { display: flex; align-items: center; gap: 8px; }
+    .output-name-row label { font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap; flex-shrink: 0; }
+    .output-name-row input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 13.5px;
+    }
+    .output-name-row input:focus { outline: none; border-color: #2563eb; }
     .main-btn-row { display: flex; gap: 10px; align-items: stretch; }
     .main-btn-row .btn-main { flex: 2; width: auto; }
     .main-btn-row .btn-compress { flex: 1; width: auto; }
@@ -680,6 +690,10 @@
       </div>
 
       <div class="action-btn-group">
+        <div class="output-name-row">
+          <label for="outputNameInput">병합파일 이름</label>
+          <input type="text" id="outputNameInput" placeholder="미입력 시 자동 생성 (예: 1번파일명_병합파일.pdf)" />
+        </div>
         <div class="main-btn-row">
           <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
           <button class="btn-compress" id="compress-btn" onclick="mergeFilesCompressed()" disabled>🗜️ 최대 압축 병합</button>
@@ -1059,6 +1073,25 @@
       const ext = file.name.toLowerCase().split('.').pop();
       if (ext === 'hwpx') return 'hwpx';
       return null;
+    }
+
+    // 병합 결과 파일명 결정: 사용자가 입력했으면 그 값을(.pdf 확장자 보정),
+    // 비어있으면 목록 1번 파일 이름 뒤에 "_병합파일"을 붙여서 자동 생성한다.
+    function getOutputFileName() {
+      const inputEl = document.getElementById('outputNameInput');
+      const typed = inputEl ? inputEl.value.trim() : '';
+
+      if (typed !== '') {
+        return /\.pdf$/i.test(typed) ? typed : `${typed}.pdf`;
+      }
+
+      if (fileList.length > 0) {
+        const firstName = fileList[0].file.name;
+        const baseName = firstName.replace(/\.[^.]+$/, '');
+        return `${baseName}_병합파일.pdf`;
+      }
+
+      return '병합파일.pdf';
     }
 
     function addFiles(files) {
@@ -1790,7 +1823,7 @@
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = '통합_최종취합본.pdf';
+        a.download = getOutputFileName();
         a.click();
 
         statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
@@ -2072,7 +2105,7 @@
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = '통합_최대압축본.pdf';
+        a.download = getOutputFileName();
         a.click();
         URL.revokeObjectURL(downloadUrl);
 
