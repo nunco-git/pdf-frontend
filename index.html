@@ -89,35 +89,31 @@
     .security-features strong { display: inline; font-size: 0.83rem; margin: 0; color: #14532d; }
     .security-features .feat-desc { color: #15803d; font-weight: 700; }
 
-    .hwp-tool-banner {
-      margin-top: 8px;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-      border: 1px solid #ddd6fe;
-      border-radius: 10px;
-      padding: 7px 12px;
+    /* 제목 칸 아래 한글→PDF 변환기 링크 (세로 공간을 아끼기 위해 알약형 버튼 한 줄로 압축) */
+    .title-hwp-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 4px;
+      background: #7c3aed;
+      color: white;
+      text-decoration: none;
+      font-size: 0.64rem;
+      font-weight: 700;
+      line-height: 1.3;
+      padding: 5px 10px;
+      border-radius: 14px;
+      white-space: normal;
+      box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
+      transition: background 0.15s, transform 0.15s;
     }
-    .hwp-tool-banner .hwp-tool-icon {
-      flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px;
-      background: #7c3aed; color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 12px; box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
-    }
-    .hwp-tool-banner .hwp-tool-body { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
-    .hwp-tool-banner .hwp-tool-text { font-size: 0.72rem; line-height: 1.3; color: #4c1d95; }
-    .hwp-tool-banner .hwp-tool-text strong { color: #5b21b6; font-size: 0.76rem; display: block; }
-    .btn-hwp-download {
-      flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
-      background: #7c3aed; color: white; text-decoration: none;
-      padding: 6px 14px; border-radius: 18px; font-size: 0.72rem; font-weight: 700;
-      white-space: nowrap; box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
-      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-hwp-download:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); }
+    .title-hwp-link:hover { background: #6d28d9; transform: translateY(-1px); }
 
     /* 상단 20% : 하단 80% 영역 분할 */
     .top-section {
-      flex: 0 0 14%;
-      min-height: 110px;
+      flex: 0 0 16%;
+      min-height: 142px;
       display: flex;
       align-items: stretch;
       gap: 14px;
@@ -502,8 +498,6 @@
       .file-info { max-width: 55vw; }
       .opt-field { min-width: 90px; }
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
-      .hwp-tool-banner { flex-direction: column; align-items: stretch; }
-      .btn-hwp-download { text-align: center; justify-content: center; }
       .modal-content { padding: 18px; }
     }
   </style>
@@ -517,6 +511,7 @@
           <div class="title-icon">📄</div>
           <h2 class="title-main">스마트 PDF·이미지<br>병합기</h2>
           <span class="title-security-badge">🔒 100% 메모리 보안 처리</span>
+          <a class="title-hwp-link" href="https://github.com/nunco-git/pdf-frontend/releases/download/hwptopdf/PDF.V1.0.exe" download>📝 한글toPDF 일괄 변환기 다운받기</a>
         </div>
 
         <div class="top-col-guide">
@@ -530,13 +525,6 @@
               <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기 지원</strong> <span class="feat-desc">: 회전 가능, 다수의 페이지 스크롤 가능</span></span></li>
               <li><span class="feat-icon">🖼️</span><span><strong>PDF to 이미지 변환</strong> <span class="feat-desc">: PDF 페이지당 1장의 이미지로 변환</span></span></li>
             </ul>
-            <div class="hwp-tool-banner">
-              <div class="hwp-tool-body">
-                <span class="hwp-tool-icon">📝</span>
-                <div class="hwp-tool-text"><strong>한글(HWP·HWPX) to PDF 일괄변환</strong>폴더 단위·복수 파일 일괄변환 프로그램</div>
-              </div>
-              <a class="btn-hwp-download" href="https://github.com/nunco-git/pdf-frontend/releases/download/hwptopdf/PDF.V1.0.exe" download>⬇ 한글toPDF 변환기 받기</a>
-            </div>
           </div>
         </div>
 
