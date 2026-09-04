@@ -7,9 +7,15 @@
   
   <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  <!-- pdf.js 5.4.530 (최신 안정 계열 — CVE-2024-4367 등 구버전 취약점 패치 완료).
+       4.x부터는 전역 스크립트(pdf.min.js) 배포가 중단되고 ES 모듈(.mjs)만 제공되어,
+       모듈에서 불러온 뒤 기존 코드가 그대로 쓸 수 있도록 window.pdfjsLib에 연결한다.
+       (6.x 최신판은 실제 렌더링 테스트에서 일부 브라우저 호환성 문제가 확인되어,
+        검증을 마친 5.4.530으로 고정함) -->
+  <script type="module">
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
   </script>
   <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
