@@ -7,9 +7,15 @@
   
   <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  <!-- pdf.js 5.4.530 (최신 안정 계열 — CVE-2024-4367 등 구버전 취약점 패치 완료).
+       4.x부터는 전역 스크립트(pdf.min.js) 배포가 중단되고 ES 모듈(.mjs)만 제공되어,
+       모듈에서 불러온 뒤 기존 코드가 그대로 쓸 수 있도록 window.pdfjsLib에 연결한다.
+       (6.x 최신판은 실제 렌더링 테스트에서 일부 브라우저 호환성 문제가 확인되어,
+        검증을 마친 5.4.530으로 고정함) -->
+  <script type="module">
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
   </script>
   <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -207,31 +213,6 @@
       resize: both;
     }
 
-    .folder-toolbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed #e2e8f0;
-    }
-    .btn-folder {
-      border: 1px solid #2563eb;
-      background: #eff6ff;
-      color: #2563eb;
-      font-size: 12.5px;
-      font-weight: 700;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn-folder:hover { background: #dbeafe; }
-    .btn-folder:disabled { opacity: 0.5; cursor: not-allowed; }
-    .folder-toolbar .folder-name { font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 60px; }
-    .folder-toolbar .folder-unsupported { font-size: 11.5px; color: #94a3b8; }
-    
     .file-item {
       display: flex;
       flex-direction: column;
@@ -539,7 +520,6 @@
 
       <div class="editor-layout">
         <div class="file-list-container" id="fileListContainer">
-          <div class="folder-toolbar" id="folderToolbar"></div>
           <div id="fileListItems">
             <div class="empty-msg">선택된 파일이 없습니다.</div>
           </div>
@@ -588,112 +568,6 @@
     let fileList = [];
     let selectedIndex = null;
     let draggedIndex = null;
-
-    // 3-1. 폴더 기억하기 (File System Access API — 크롬/엣지에서만 지원)
-    // 브라우저 보안 정책상 완전 자동으로 폴더를 읽을 수는 없어서, 최초 1회
-    // 폴더를 선택하면 그 위치를 기억해뒀다가, 다음 방문 시 버튼 한 번(재확인)
-    // 으로 그 폴더 안의 PDF/이미지 파일을 바로 불러오는 방식으로 구현한다.
-    const FOLDER_DB_NAME = 'ezpdfmerger_folder';
-    const FOLDER_STORE = 'handles';
-    const FOLDER_KEY = 'lastFolder';
-    const supportsFolderApi = typeof window.showDirectoryPicker === 'function';
-
-    function openFolderDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(FOLDER_DB_NAME, 1);
-        req.onupgradeneeded = () => { req.result.createObjectStore(FOLDER_STORE); };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-    async function saveFolderHandle(handle) {
-      const db = await openFolderDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(FOLDER_STORE, 'readwrite');
-        tx.objectStore(FOLDER_STORE).put(handle, FOLDER_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function loadFolderHandle() {
-      const db = await openFolderDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(FOLDER_STORE, 'readonly');
-        const req = tx.objectStore(FOLDER_STORE).get(FOLDER_KEY);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    // 지정한 폴더 핸들 안의 PDF/이미지/HWPX 파일을 목록에 추가
-    async function loadFilesFromFolderHandle(handle) {
-      const matched = [];
-      for await (const entry of handle.values()) {
-        if (entry.kind !== 'file') continue;
-        try {
-          const file = await entry.getFile();
-          if (getFileKind(file)) matched.push(file);
-        } catch (e) { /* 개별 파일 접근 실패는 건너뜀 */ }
-      }
-      if (matched.length === 0) {
-        alert('이 폴더에는 지원되는 파일(PDF, 이미지, HWPX)이 없습니다.');
-        return;
-      }
-      addFiles(matched);
-    }
-
-    async function openFolderPicker() {
-      if (!supportsFolderApi) return;
-      try {
-        const handle = await window.showDirectoryPicker({ id: 'ezpdfmerger', mode: 'read' });
-        await saveFolderHandle(handle);
-        await renderFolderToolbar();
-        await loadFilesFromFolderHandle(handle);
-      } catch (e) {
-        if (e && e.name !== 'AbortError') console.error('폴더 선택 오류:', e);
-      }
-    }
-
-    async function reopenRememberedFolder() {
-      if (!supportsFolderApi) return;
-      const handle = await loadFolderHandle();
-      if (!handle) return;
-      try {
-        let perm = await handle.queryPermission({ mode: 'read' });
-        if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'read' });
-        if (perm !== 'granted') {
-          alert('폴더 접근 권한이 필요합니다.');
-          return;
-        }
-        await loadFilesFromFolderHandle(handle);
-      } catch (e) {
-        console.error('폴더 재접근 오류:', e);
-        alert('저장된 폴더에 접근할 수 없습니다. 폴더를 다시 선택해주세요.');
-      }
-    }
-
-    async function renderFolderToolbar() {
-      const bar = document.getElementById('folderToolbar');
-      if (!bar) return;
-
-      if (!supportsFolderApi) {
-        bar.innerHTML = '<span class="folder-unsupported">📁 폴더 불러오기는 크롬/엣지 브라우저에서만 지원됩니다.</span>';
-        return;
-      }
-
-      const handle = await loadFolderHandle().catch(() => null);
-      if (handle) {
-        bar.innerHTML = `
-          <button type="button" class="btn-folder" onclick="reopenRememberedFolder()">📁 폴더 다시 열기</button>
-          <span class="folder-name" title="${handle.name}">마지막 폴더: ${handle.name}</span>
-          <button type="button" class="btn-folder" onclick="openFolderPicker()" style="flex-shrink:0;">다른 폴더</button>
-        `;
-      } else {
-        bar.innerHTML = `<button type="button" class="btn-folder" onclick="openFolderPicker()">📁 다운로드 폴더 등 선택해서 불러오기</button>`;
-      }
-    }
-
-    renderFolderToolbar();
 
     const dropZone = document.getElementById('dropZone');
 
