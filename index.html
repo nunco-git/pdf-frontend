@@ -1,1791 +1,346 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>스마트 PDF·이미지 병합기</title>
-  
-  <!-- PDF-LIB & PDF.JS -->
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <!-- pdf.js 5.4.530 (최신 안정 계열 — CVE-2024-4367 등 구버전 취약점 패치 완료).
-       4.x부터는 전역 스크립트(pdf.min.js) 배포가 중단되고 ES 모듈(.mjs)만 제공되어,
-       모듈에서 불러온 뒤 기존 코드가 그대로 쓸 수 있도록 window.pdfjsLib에 연결한다.
-       (6.x 최신판은 실제 렌더링 테스트에서 일부 브라우저 호환성 문제가 확인되어,
-        검증을 마친 5.4.530으로 고정함) -->
-  <script type="module">
-    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.min.mjs';
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.530/pdf.worker.min.mjs';
-    window.pdfjsLib = pdfjsLib;
-  </script>
-  <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무 웹앱 포털</title>
 
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Malgun Gothic', sans-serif;
-      margin: 0;
-      padding: 40px 20px;
-      background-color: #f4f6f8;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      user-select: none;
-      -webkit-user-select: none;
-    }
+<!-- Firebase SDK (좌측 광고 배너) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    .app-container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 30px;
-      max-width: 1900px;
-      width: 100%;
-      margin: 0 auto;
-      align-items: start;
-    }
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background: #f1f5f9;
+    overflow: hidden;
+  }
 
-    .main-content {
-      width: 100%;
-      max-width: none;
-      margin: 0 auto;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 36px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      min-height: 88vh;
-    }
+  /* ── 상단 탭 바 (세로 폭 약 1cm ≈ 40px) ── */
+  #topBar {
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  #topBar .brand {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2px 10px;
+    line-height: 1.3;
+    gap: 1px;
+    background: linear-gradient(90deg, #1e3a8a 0%, #1e293b 85%);
+    border-right: 1px solid #334155;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  #topBar .brand .brand-tagline {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #93c5fd;
+    letter-spacing: -0.1px;
+  }
+  #topBar .brand .brand-main {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.1px;
+  }
+  #tabList {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  #tabList::-webkit-scrollbar { height: 4px; }
+  #tabList::-webkit-scrollbar-thumb { background: #334155; }
 
-    h2 { color: #0f172a; margin: 0; font-size: 24px; line-height: 1.3; }
-    p.sub { color: #64748b; font-size: 16px; margin-bottom: 24px; }
+  .tab-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 16px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+  .tab-btn.active { color: #ffffff; border-bottom-color: #3b82f6; background: rgba(59,130,246,0.12); }
 
-    .security-banner {
-      background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
-      border: 1px solid #bbf7d0;
-      border-radius: 14px;
-      padding: 12px 16px;
-      color: #166534;
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1.55;
-      overflow-y: auto;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04), 0 1px 2px rgba(16, 24, 40, 0.03);
-    }
-    .security-banner-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .security-banner-header strong { margin-bottom: 0; }
-    .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; letter-spacing: -0.2px; }
+  /* ── 모바일 전용 메뉴(햄버거) ── */
+  #mobileMenuBtn {
+    display: none;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    background: transparent;
+    border: none;
+    border-left: 1px solid #1e293b;
+    color: #f8fafc;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  #mobileMenuBtn:hover { background: rgba(255,255,255,0.08); }
+  #mobileMenuDropdown {
+    display: none;
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 2000;
+    flex-direction: column;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  #mobileMenuDropdown.open { display: flex; }
+  #mobileMenuDropdown .tab-btn {
+    justify-content: flex-start;
+    padding: 13px 18px;
+    border-bottom: 1px solid #1e293b;
+    border-radius: 0;
+    font-size: 13.5px;
+  }
 
-    .security-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-    .security-features li {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(255, 255, 255, 0.55);
-      border: 1px solid rgba(187, 247, 208, 0.7);
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 0.83rem;
-    }
-    .security-features .feat-icon {
-      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
-      background: #16a34a; color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 13px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
-    }
-    .security-features strong { display: inline; font-size: 0.83rem; margin: 0; color: #14532d; }
-    .security-features .feat-desc { color: #15803d; font-weight: 700; }
+  /* ── 전체 레이아웃 ── */
+  #shell { display: flex; flex-direction: column; height: 100vh; }
+  #body { flex: 1; display: flex; min-height: 0; }
 
-    /* 제목 칸 아래 한글→PDF 변환기 링크 (세로 공간을 아끼기 위해 알약형 버튼 한 줄로 압축) */
-    .title-hwp-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      gap: 4px;
-      background: #7c3aed;
-      color: white;
-      text-decoration: none;
-      font-size: 0.64rem;
-      font-weight: 700;
-      line-height: 1.3;
-      padding: 5px 10px;
-      border-radius: 14px;
-      white-space: normal;
-      box-shadow: 0 2px 5px rgba(124, 58, 237, 0.3);
-      transition: background 0.15s, transform 0.15s;
-    }
-    .title-hwp-link:hover { background: #6d28d9; transform: translateY(-1px); }
+  /* ── 좌측 광고 사이드바 ── */
+  #adSidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+  }
+  .banner-card {
+    background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .banner-card img { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; background: #f8fafc; }
+  .banner-card h4 { margin: 4px 0; font-size: 13px; color: #1e293b; word-break: keep-all; }
+  .banner-card p { font-size: 11.5px; color: #64748b; margin: 0 0 8px 0; line-height: 1.4; word-break: keep-all; }
+  .banner-card a { display: inline-block; width: 100%; padding: 6px 0; background: #f1f5f9; color: #2563eb; text-decoration: none; font-size: 11.5px; font-weight: bold; border-radius: 5px; }
+  .banner-card a:hover { background: #e2e8f0; }
 
-    /* 상단 20% : 하단 80% 영역 분할 */
-    .top-section {
-      flex: 0 0 16%;
-      min-height: 142px;
-      display: flex;
-      align-items: stretch;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .top-col-title {
-      flex: 0 0 22%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      text-align: center;
-      background: linear-gradient(160deg, #fff7ed 0%, #ffedd5 100%);
-      border: 1px solid #fed7aa;
-      border-radius: 12px;
-      padding: 8px 10px;
-      box-shadow: 0 1px 3px rgba(194,65,12,0.06);
-    }
-    .title-icon { font-size: 1.5rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(194,65,12,0.15)); }
-    .title-main { margin: 0; color: #9a3412; font-size: 1.05rem; font-weight: 800; line-height: 1.25; letter-spacing: -0.3px; display: block; }
-    .title-security-badge { background: #dcfce7; color: #166534; font-size: 0.7rem; padding: 3px 7px; border-radius: 4px; font-weight: 600; }
-    .top-col-guide {
-      flex: 1 1 46%;
-      display: flex;
-      min-width: 0;
-    }
-    .top-col-guide .security-banner { width: 100%; }
-    .top-col-drop {
-      flex: 0 0 32%;
-      display: flex;
-    }
-    .top-col-drop .file-select-box {
-      flex: 1;
-      margin-bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
+  /* ── 메인 iframe 영역 ── */
+  #mainArea { flex: 1; position: relative; min-width: 0; background: #fff; }
+  #appFrame { width: 100%; height: 100%; border: none; display: block; }
 
-    .file-select-box {
-      border: 2px dashed #3b82f6;
-      border-radius: 14px;
-      padding: 14px;
-      text-align: center;
-      background: linear-gradient(160deg, #eff6ff 0%, #f5f8ff 100%);
-      cursor: pointer;
-      margin-bottom: 20px;
-      font-size: 16px;
-      transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
-    }
-    .file-select-box:hover { transform: translateY(-1px); border-color: #1d4ed8; }
-    .file-select-box .drop-icon { display: block; font-size: 22px; margin-bottom: 4px; }
-    .file-select-box strong {
-      display: block;
-      font-size: 16px;
-      font-weight: 700;
-      line-height: 1.55;
-      color: #1e3a8a;
-      letter-spacing: -0.2px;
-    }
-    .file-select-box.dragover {
-      background: #dbeafe;
-      border-color: #1d4ed8;
-    }
-    input[type="file"] { display: none; }
+  #frameHint {
+    position: absolute; bottom: 10px; right: 14px;
+    background: rgba(15,23,42,0.85);
+    color: #cbd5e1;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: none;
+    line-height: 1.4;
+  }
+  #frameHint a { color: #93c5fd; font-weight: 700; text-decoration: none; }
+  #frameHint a:hover { text-decoration: underline; }
 
-    .editor-layout {
-      display: flex;
-      flex-wrap: nowrap;
-      align-items: stretch;
-      gap: 14px;
-      margin-bottom: 8px;
-      flex: 1 1 80%;
-      min-height: 0;
-    }
-
-    .file-list-container {
-      flex: 0 0 calc(33% - 7px);
-      min-width: 220px;
-      max-width: 80%;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #fafafa;
-      height: 100%;
-      min-height: 200px;
-      max-height: 90vh;
-      overflow: auto;
-      padding: 10px;
-      resize: both;
-    }
-
-    .folder-toolbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed #e2e8f0;
-    }
-    .btn-folder {
-      border: 1px solid #2563eb;
-      background: #eff6ff;
-      color: #2563eb;
-      font-size: 12.5px;
-      font-weight: 700;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn-folder:hover { background: #dbeafe; }
-    .btn-folder:disabled { opacity: 0.5; cursor: not-allowed; }
-    .folder-toolbar .folder-name { font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 60px; }
-    .folder-toolbar .folder-unsupported { font-size: 11.5px; color: #94a3b8; }
-    
-    .file-item {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 8px 10px;
-      margin-bottom: 8px;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      cursor: grab;
-      transition: border-color 0.2s, background-color 0.2s, opacity 0.2s;
-    }
-    .file-item:active { cursor: grabbing; }
-    .file-item:hover { border-color: #93c5fd; }
-    .file-item.selected { border: 2px solid #2563eb; background-color: #f0f9ff; }
-    .file-item.dragging { opacity: 0.4; }
-
-    .file-main-row { display: flex; align-items: center; justify-content: space-between; }
-    .file-info {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-      max-width: 230px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      font-weight: bold;
-    }
-    .drag-handle { color: #94a3b8; margin-right: 2px; font-size: 14px; cursor: grab; }
-    .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 12px; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
-    .badge-img { background: #f59e0b; }
-
-    .file-opt-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      padding-top: 6px;
-      border-top: 1px dashed #f1f5f9;
-      font-size: 13px;
-    }
-    .opt-field { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 110px; }
-    .opt-field label { color: #64748b; white-space: nowrap; font-weight: bold; }
-    .opt-field input, .opt-field select {
-      padding: 3px 5px;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      font-size: 13px;
-      width: 100%;
-    }
-
-    .btn-group { display: flex; gap: 4px; }
-    .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-    .btn-del { color: #ef4444; border-color: #fca5a5; }
-
-    .preview-panel {
-      flex: 0 0 calc(66% - 7px);
-      min-width: 260px;
-      max-width: 85%;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #f8fafc;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100%;
-      min-height: 200px;
-      max-height: 90vh;
-      overflow: auto;
-      resize: both;
-    }
-    .preview-title { font-size: 14px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
-    .preview-box {
-      width: 100%;
-      height: 100%;
-      background: #e2e8f0;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      position: relative;
-    }
-    .preview-box img, .preview-box canvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      transition: transform 0.3s ease;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    .preview-placeholder { font-size: 13px; color: #94a3b8; text-align: center; line-height: 1.4; }
-
-    /* PDF 다중 페이지 스크롤 미리보기 */
-    .preview-box.pdf-scroll-mode {
-      display: block;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 0;
-    }
-    .pdf-scroll-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 10px;
-    }
-    .pdf-page-wrap {
-      position: relative;
-      width: 100%;
-      background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .pdf-page-canvas { width: 100%; height: 100%; display: block; }
-    .pdf-page-label {
-      position: absolute;
-      top: 6px; right: 8px;
-      background: rgba(15,23,42,0.65);
-      color: #fff;
-      font-size: 12px;
-      padding: 2px 7px;
-      border-radius: 10px;
-      z-index: 2;
-      pointer-events: none;
-    }
-    .pdf-page-loading { font-size: 13px; color: #94a3b8; }
-    .pdf-current-page-badge {
-      position: sticky;
-      top: 6px;
-      float: right;
-      margin-right: 6px;
-      background: rgba(37,99,235,0.9);
-      color: #fff;
-      font-size: 13px;
-      font-weight: bold;
-      padding: 3px 9px;
-      border-radius: 10px;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    /* HWPX(한글) 텍스트 전용 미리보기 */
-    .preview-box.hwpx-text-mode {
-      display: block;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 0;
-    }
-    .hwpx-text-preview {
-      background: #fff;
-      border-radius: 4px;
-      margin: 10px;
-      padding: 20px;
-      font-size: 15px;
-      line-height: 1.7;
-      color: #1e293b;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    /* HWPX 원본형(A4) 미리보기 */
-    .preview-box.hwpx-text-mode { overflow-x: auto; }
-    .hwpx-render-wrap {
-      background: #e2e8f0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
-    .hwpx-page {
-      background: #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      box-sizing: border-box;
-      font-size: 10pt;
-      line-height: 1.6;
-      word-break: break-word;
-      color: #111827;
-      flex-shrink: 0;
-    }
-    .hwpx-preview-table {
-      border-collapse: collapse;
-      margin: 4px 0;
-      font-size: inherit;
-      width: 100%;
-      table-layout: fixed;
-    }
-    .hwpx-preview-table td { vertical-align: top; }
-    .hwpx-preview-table td p { margin: 0; }
-
-    .btn-main {
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      padding: 16px;
-      font-size: 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      width: 100%;
-      font-weight: bold;
-    }
-    .btn-main:hover { background-color: #1d4ed8; }
-    .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
-
-    .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
-    .output-name-row { display: flex; align-items: center; gap: 8px; }
-    .output-name-row label { font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap; flex-shrink: 0; }
-    .output-name-row input {
-      flex: 1;
-      padding: 8px 10px;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 13.5px;
-    }
-    .output-name-row input:focus { outline: none; border-color: #2563eb; }
-    .main-btn-row { display: flex; gap: 10px; align-items: stretch; }
-    .main-btn-row .btn-main { flex: 2; width: auto; }
-    .main-btn-row .btn-compress { flex: 1; width: auto; }
-    .btn-secondary-row { display: flex; gap: 10px; }
-    .btn-secondary { flex: 1; background-color: white; color: #2563eb; border: 1.5px solid #2563eb; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-    .btn-secondary:hover { background-color: #eff6ff; }
-    .btn-secondary:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
-
-    .btn-compress { background-color: #fff7ed; color: #c2410c; border: 1.5px solid #ea580c; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-    .btn-compress:hover { background-color: #ffedd5; }
-    .btn-compress:disabled { background-color: #f8fafc; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; }
-    .compress-note { font-size: 11.5px; color: #94a3b8; margin-top: -2px; text-align: center; }
-
-    .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
-    .btn-reset:hover { background: #ef4444; color: white; }
-    .btn-reset:disabled { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; background: white; }
-    #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
-    .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
-
-    @media (max-width: 1180px) {
-      .app-container { display: flex; flex-direction: column; align-items: center; }
-      .main-content { min-height: auto; }
-      .top-section { flex-direction: column; flex-basis: auto; height: auto; }
-      .top-col-title, .top-col-guide, .top-col-drop { flex-basis: auto; width: 100%; min-width: 0; }
-      .editor-layout { flex-direction: column; flex-basis: auto; }
-      .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
-      .file-list-container { height: 220px; }
-      .preview-panel { height: 440px; }
-    }
-    @media (max-width: 640px) {
-      .main-content { padding: 20px; border-radius: 12px; }
-      .title-main { font-size: 1.1rem; }
-    }
-    @media (max-width: 480px) {
-      body { padding: 12px; }
-      .main-content { padding: 14px; }
-      .top-col-title, .top-col-guide, .top-col-drop { padding: 10px; }
-      .title-main { font-size: 1rem; }
-      .file-select-box { padding: 16px; }
-      .file-select-box strong { font-size: 14px; }
-      .btn-secondary-row { flex-direction: column; }
-      .main-btn-row { flex-direction: column; }
-      .main-btn-row .btn-main, .main-btn-row .btn-compress { flex: 1; }
-      .file-info { max-width: 55vw; }
-      .opt-field { min-width: 90px; }
-      .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
-      .modal-content { padding: 18px; }
-    }
-  </style>
+  @media (max-width: 900px) {
+    #adSidebar { display: none; }
+  }
+  @media (max-width: 640px) {
+    #tabList { display: none; }
+    #mobileMenuBtn { display: flex; }
+    #topBar .brand { width: auto; padding: 2px 12px; }
+  }
+</style>
 </head>
 <body>
 
-  <div class="app-container">
-    <div class="main-content">
-      <div class="top-section">
-        <div class="top-col-title">
-          <div class="title-icon">📄</div>
-          <h2 class="title-main">스마트 PDF·이미지<br>병합기</h2>
-          <span class="title-security-badge">🔒 100% 메모리 보안 처리</span>
-          <a class="title-hwp-link" href="https://github.com/nunco-git/pdf-frontend/releases/download/hwptopdf/PDF.V1.0.exe" download>📝 한글toPDF 일괄 변환기 다운받기</a>
-        </div>
-
-        <div class="top-col-guide">
-          <div class="security-banner">
-            <div class="security-banner-header">
-              <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
-              <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
-            </div>
-            <ul class="security-features">
-              <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기 지원</strong> <span class="feat-desc">: 회전 가능, 다수의 페이지 스크롤 가능</span></span></li>
-              <li><span class="feat-icon">🖼️</span><span><strong>PDF to 이미지 변환</strong> <span class="feat-desc">: PDF 페이지당 1장의 이미지로 변환</span></span></li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="top-col-drop">
-          <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            <span class="drop-icon">📂</span>
-            <strong>클릭하거나 파일(PDF, 이미지)을<br>이곳으로 끌어다 놓으세요</strong>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwpx" multiple onchange="handleFileSelect(event)" />
-          </div>
-        </div>
-      </div>
-
-      <div class="editor-layout">
-        <div class="file-list-container" id="fileListContainer">
-          <div class="folder-toolbar" id="folderToolbar"></div>
-          <div id="fileListItems">
-            <div class="empty-msg">선택된 파일이 없습니다.</div>
-          </div>
-        </div>
-
-        <div class="preview-panel">
-          <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(모서리를 드래그하여 크기 조절)</span></div>
-          <div class="preview-box" id="previewBox">
-            <div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="action-btn-group">
-        <div class="output-name-row">
-          <label for="outputNameInput">병합파일 이름</label>
-          <input type="text" id="outputNameInput" placeholder="미입력 시 자동 생성 (예: 1번파일명_병합파일.pdf)" />
-        </div>
-        <div class="main-btn-row">
-          <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
-          <button class="btn-compress" id="compress-btn" onclick="mergeFilesCompressed()" disabled>🗜️ 최대 압축 병합</button>
-        </div>
-        <div class="compress-note">최대 압축 병합: 모든 페이지를 저해상도 이미지로 다시 찍어 압축합니다 — 글자를 선택·검색할 수 없게 됩니다.</div>
-        <div class="btn-secondary-row">
-          <button class="btn-secondary" id="img-high-btn" onclick="exportAsImages('high')" disabled>🖼️ 이미지 변환 (고화질)</button>
-          <button class="btn-secondary" id="img-low-btn" onclick="exportAsImages('low')" disabled>🖼️ 이미지 변환 (저화질)</button>
-        </div>
-      </div>
-      <div id="status"></div>
+<div id="shell">
+  <div id="topBar">
+    <div class="brand">
+      <span class="brand-tagline">슬기로운 직장생활을 위한</span>
+      <span class="brand-main">📂 스마트 업무앱</span>
     </div>
+    <div id="tabList"></div>
+    <button id="mobileMenuBtn" onclick="toggleMobileMenu()" aria-label="앱 목록 열기">☰</button>
+    <div id="mobileMenuDropdown"></div>
   </div>
 
-  <script>
-    // 1. 보안 설정: 소스보기 및 개발자도구 방지
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('keydown', e => {
-      if (e.keyCode === 123 || 
-         (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
-         (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83))) {
-        e.preventDefault();
-        return false;
-      }
+  <div id="body">
+    <div id="adSidebar">
+      <div class="banner-card" id="card-1"></div>
+      <div class="banner-card" id="card-2"></div>
+      <div class="banner-card" id="card-3"></div>
+      <div class="banner-card" id="card-4"></div>
+    </div>
+
+    <div id="mainArea">
+      <iframe id="appFrame" title="웹앱 화면"></iframe>
+      <div id="frameHint">이 화면이 정상적으로 안 보이면 해당 사이트가 다른 페이지 안에 넣는(iframe) 것을 막아둔 경우입니다.<br><a href="#" onclick="openCurrentInNewTab(); return false;">새 탭에서 직접 열기 →</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── 여기에 포털에 넣을 웹앱 목록을 정의합니다. 필요하면 자유롭게 추가/수정하세요. ──
+  const APPS = [
+    { title: '📄 스마트 PDF·이미지 병합기', url: 'https://pdf-frontend-sigma-one.vercel.app/' },
+    { title: '📊 스마트 엑셀 병합기', url: 'https://nunco-git.github.io/excelmerge/' },
+    { title: '📝 스마트 한글(HWPX) 병합기', url: 'https://nunco-git.github.io/hwpxmerge/' },
+    { title: '🧮 스마트 엑셀 함수 변환기', url: 'https://nunco-git.github.io/excelfuntion/' },
+    { title: '🗺️ 스마트 맵마커(엑셀주소→네이버 지도표시)', url: 'https://nunco-git.github.io/multipointmap/' },
+    { title: '🖼️ 스마트 이미지 편집기', url: 'https://nunco-git.github.io/picadjust/' },
+    { title: '🏷️ 스마트 파일명 관리자', url: 'https://nunco-git.github.io/filerename/' },
+    { title: '📋 스마트 자료 취합 시스템', url: 'https://nunco-git.github.io/data-compile/' },
+  ];
+
+  let currentUrl = APPS.length > 0 ? APPS[0].url : '';
+
+  function renderTabs() {
+    const tabList = document.getElementById('tabList');
+    const mobileDropdown = document.getElementById('mobileMenuDropdown');
+    tabList.innerHTML = '';
+    mobileDropdown.innerHTML = '';
+    APPS.forEach((app, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (app.url === currentUrl ? ' active' : '');
+      btn.textContent = app.title;
+      btn.onclick = () => { switchApp(app.url); closeMobileMenu(); };
+      tabList.appendChild(btn);
+
+      const mBtn = document.createElement('button');
+      mBtn.className = 'tab-btn' + (app.url === currentUrl ? ' active' : '');
+      mBtn.textContent = app.title;
+      mBtn.onclick = () => { switchApp(app.url); closeMobileMenu(); };
+      mobileDropdown.appendChild(mBtn);
     });
+  }
 
-    // 3. 파일 관련 처리 로직
-    let fileList = [];
-    let selectedIndex = null;
-    let draggedIndex = null;
+  function toggleMobileMenu() {
+    document.getElementById('mobileMenuDropdown').classList.toggle('open');
+  }
 
-    // 3-1. 폴더 기억하기 (File System Access API — 크롬/엣지에서만 지원)
-    // 브라우저 보안 정책상 완전 자동으로 폴더를 읽을 수는 없어서, 최초 1회
-    // 폴더를 선택하면 그 위치를 기억해뒀다가, 다음 방문 시 버튼 한 번(재확인)
-    // 으로 그 폴더 안의 PDF/이미지 파일을 바로 불러오는 방식으로 구현한다.
-    const FOLDER_DB_NAME = 'ezpdfmerger_folder';
-    const FOLDER_STORE = 'handles';
-    const FOLDER_KEY = 'lastFolder';
-    const supportsFolderApi = typeof window.showDirectoryPicker === 'function';
+  function closeMobileMenu() {
+    document.getElementById('mobileMenuDropdown').classList.remove('open');
+  }
 
-    function openFolderDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(FOLDER_DB_NAME, 1);
-        req.onupgradeneeded = () => { req.result.createObjectStore(FOLDER_STORE); };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
+  function switchApp(url) {
+    currentUrl = url;
+    document.getElementById('appFrame').src = url;
+    renderTabs();
+    // iframe 임베드가 막혀 있는 사이트인 경우를 대비한 안내(로드 실패를 100% 감지할
+    // 방법은 브라우저 보안 정책상 없어서, 일정 시간 뒤 안내를 살짝 보여주는 방식으로 처리)
+    const hint = document.getElementById('frameHint');
+    hint.style.display = 'none';
+    clearTimeout(window.__frameHintTimer);
+    window.__frameHintTimer = setTimeout(() => { hint.style.display = 'block'; }, 4000);
+  }
+
+  function openCurrentInNewTab() {
+    if (currentUrl) window.open(currentUrl, '_blank', 'noopener');
+  }
+
+  document.getElementById('appFrame').addEventListener('load', () => {
+    document.getElementById('frameHint').style.display = 'none';
+    clearTimeout(window.__frameHintTimer);
+  });
+
+  renderTabs();
+  if (currentUrl) document.getElementById('appFrame').src = currentUrl;
+
+  // ── 좌측 광고 배너 (PDF/엑셀/한글 병합기와 같은 Firebase 프로젝트 공유, 포털 전용 문서 사용) ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1KB8TojybTREGiKJJukmgcGgtDTbZodA",
+    authDomain: "ezpdfmerger.firebaseapp.com",
+    projectId: "ezpdfmerger",
+    storageBucket: "ezpdfmerger.firebasestorage.app",
+    messagingSenderId: "613693021673",
+    appId: "1:613693021673:web:41982b69c1e70692e83f78",
+    measurementId: "G-P70QSP1WSV"
+  };
+
+  let db = null;
+  try {
+    if (typeof firebase !== 'undefined') {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
     }
-    async function saveFolderHandle(handle) {
-      const db = await openFolderDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(FOLDER_STORE, 'readwrite');
-        tx.objectStore(FOLDER_STORE).put(handle, FOLDER_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function loadFolderHandle() {
-      const db = await openFolderDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(FOLDER_STORE, 'readonly');
-        const req = tx.objectStore(FOLDER_STORE).get(FOLDER_KEY);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject(req.error);
-      });
-    }
+  } catch (err) {
+    console.error('Firebase 초기화 오류(광고 배너 비활성화):', err);
+  }
 
-    // 지정한 폴더 핸들 안의 PDF/이미지/HWPX 파일을 목록에 추가
-    async function loadFilesFromFolderHandle(handle) {
-      const matched = [];
-      for await (const entry of handle.values()) {
-        if (entry.kind !== 'file') continue;
-        try {
-          const file = await entry.getFile();
-          if (getFileKind(file)) matched.push(file);
-        } catch (e) { /* 개별 파일 접근 실패는 건너뜀 */ }
+  const defaultCards = {};
+  for (let i = 1; i <= 4; i++) {
+    defaultCards[i] = { title: `알림 배너 ${i}`, desc: '클릭하면 해당 링크로 바로 연결됩니다.', img: '', link: '#', btnText: '자세히 보기' };
+  }
+
+  function sanitizeUrl(url) {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+  }
+
+  function applyCardsToDOM(cards) {
+    for (let i = 1; i <= 4; i++) {
+      const cardEl = document.getElementById(`card-${i}`);
+      if (!cardEl) continue;
+      const data = cards[i] || defaultCards[i];
+      cardEl.innerHTML = '';
+
+      const safeImg = sanitizeUrl(data.img);
+      if (safeImg) {
+        const img = document.createElement('img');
+        img.src = safeImg; img.alt = 'banner';
+        cardEl.appendChild(img);
       }
-      if (matched.length === 0) {
-        alert('이 폴더에는 지원되는 파일(PDF, 이미지, HWPX)이 없습니다.');
-        return;
+      const h4 = document.createElement('h4'); h4.textContent = data.title || ''; cardEl.appendChild(h4);
+      const p = document.createElement('p'); p.textContent = data.desc || ''; cardEl.appendChild(p);
+      const a = document.createElement('a');
+      a.href = sanitizeUrl(data.link) || '#';
+      a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.textContent = data.btnText || '';
+      cardEl.appendChild(a);
+    }
+  }
+
+  async function fetchAndRenderBanners() {
+    let cards = { ...defaultCards };
+    try {
+      if (db) {
+        const doc = await db.collection('settings').doc('portal_banners').get();
+        if (doc.exists && doc.data().cards) cards = { ...defaultCards, ...doc.data().cards };
       }
-      addFiles(matched);
+    } catch (error) {
+      console.error('배너 데이터 불러오기 오류:', error);
     }
-
-    async function openFolderPicker() {
-      if (!supportsFolderApi) return;
-      try {
-        const handle = await window.showDirectoryPicker({ id: 'ezpdfmerger', mode: 'read' });
-        await saveFolderHandle(handle);
-        await renderFolderToolbar();
-        await loadFilesFromFolderHandle(handle);
-      } catch (e) {
-        if (e && e.name !== 'AbortError') console.error('폴더 선택 오류:', e);
-      }
-    }
-
-    async function reopenRememberedFolder() {
-      if (!supportsFolderApi) return;
-      const handle = await loadFolderHandle();
-      if (!handle) return;
-      try {
-        let perm = await handle.queryPermission({ mode: 'read' });
-        if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'read' });
-        if (perm !== 'granted') {
-          alert('폴더 접근 권한이 필요합니다.');
-          return;
-        }
-        await loadFilesFromFolderHandle(handle);
-      } catch (e) {
-        console.error('폴더 재접근 오류:', e);
-        alert('저장된 폴더에 접근할 수 없습니다. 폴더를 다시 선택해주세요.');
-      }
-    }
-
-    async function renderFolderToolbar() {
-      const bar = document.getElementById('folderToolbar');
-      if (!bar) return;
-
-      if (!supportsFolderApi) {
-        bar.innerHTML = '<span class="folder-unsupported">📁 폴더 불러오기는 크롬/엣지 브라우저에서만 지원됩니다.</span>';
-        return;
-      }
-
-      const handle = await loadFolderHandle().catch(() => null);
-      if (handle) {
-        bar.innerHTML = `
-          <button type="button" class="btn-folder" onclick="reopenRememberedFolder()">📁 폴더 다시 열기</button>
-          <span class="folder-name" title="${handle.name}">마지막 폴더: ${handle.name}</span>
-          <button type="button" class="btn-folder" onclick="openFolderPicker()" style="flex-shrink:0;">다른 폴더</button>
-        `;
-      } else {
-        bar.innerHTML = `<button type="button" class="btn-folder" onclick="openFolderPicker()">📁 다운로드 폴더 등 선택해서 불러오기</button>`;
-      }
-    }
-
-    renderFolderToolbar();
-
-    const dropZone = document.getElementById('dropZone');
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      const files = Array.from(dt.files);
-      addFiles(files);
-    });
-
-    function handleFileSelect(event) {
-      const selectedFiles = Array.from(event.target.files);
-      addFiles(selectedFiles);
-      event.target.value = '';
-    }
-
-    // 파일 확장자/MIME으로 종류를 판별한다
-    function getFileKind(file) {
-      if (file.type === 'application/pdf') return 'pdf';
-      if (file.type.startsWith('image/')) return 'image';
-      const ext = file.name.toLowerCase().split('.').pop();
-      if (ext === 'hwpx') return 'hwpx';
-      return null;
-    }
-
-    // 병합 결과 파일명 결정: 사용자가 입력했으면 그 값을(.pdf 확장자 보정),
-    // 비어있으면 목록 1번 파일 이름 뒤에 "_병합파일"을 붙여서 자동 생성한다.
-    function getOutputFileName() {
-      const inputEl = document.getElementById('outputNameInput');
-      const typed = inputEl ? inputEl.value.trim() : '';
-
-      if (typed !== '') {
-        return /\.pdf$/i.test(typed) ? typed : `${typed}.pdf`;
-      }
-
-      if (fileList.length > 0) {
-        const firstName = fileList[0].file.name;
-        const baseName = firstName.replace(/\.[^.]+$/, '');
-        return `${baseName}_병합파일.pdf`;
-      }
-
-      return '병합파일.pdf';
-    }
-
-    function addFiles(files) {
-      files.forEach(file => {
-        const kind = getFileKind(file);
-        if (kind) {
-          fileList.push({
-            file: file,
-            kind: kind,
-            pageRange: '',
-            rotation: 0
-          });
-        }
-      });
-      renderFileList();
-      if (selectedIndex === null && fileList.length > 0) {
-        selectItem(0);
-      }
-    }
-
-    // 첨부된 모든 파일을 목록에서 한 번에 제거 (팝업 없이 즉시 초기화)
-    function resetAll() {
-      if (fileList.length === 0) return;
-      fileList = [];
-      selectedIndex = null;
-      draggedIndex = null;
-      const fi = document.getElementById('fileInput');
-      if (fi) fi.value = '';
-      renderFileList();
-    }
-
-    function renderFileList() {
-      const container = document.getElementById('fileListItems');
-      const resetBtn = document.getElementById('reset-btn');
-      const mergeBtn = document.getElementById('merge-btn');
-      const imgHighBtn = document.getElementById('img-high-btn');
-      const imgLowBtn = document.getElementById('img-low-btn');
-      const compressBtn = document.getElementById('compress-btn');
-      container.innerHTML = '';
-      if (fileList.length === 0) {
-        container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
-        if (resetBtn) resetBtn.disabled = true;
-        if (mergeBtn) mergeBtn.disabled = true;
-        if (imgHighBtn) imgHighBtn.disabled = true;
-        if (imgLowBtn) imgLowBtn.disabled = true;
-        if (compressBtn) compressBtn.disabled = true;
-        showPreview(null);
-        return;
-      }
-      if (resetBtn) resetBtn.disabled = false;
-      if (mergeBtn) mergeBtn.disabled = false;
-      if (imgHighBtn) imgHighBtn.disabled = false;
-      if (imgLowBtn) imgLowBtn.disabled = false;
-      if (compressBtn) compressBtn.disabled = false;
-
-      fileList.forEach((itemData, index) => {
-        const file = itemData.file;
-        const kind = itemData.kind || getFileKind(file);
-        const isImage = kind === 'image';
-
-        const itemEl = document.createElement('div');
-        itemEl.className = `file-item ${selectedIndex === index ? 'selected' : ''}`;
-        itemEl.draggable = true;
-
-        itemEl.ondragstart = (e) => {
-          draggedIndex = index;
-          itemEl.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        };
-
-        itemEl.ondragend = () => {
-          draggedIndex = null;
-          itemEl.classList.remove('dragging');
-        };
-
-        itemEl.ondragover = (e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-        };
-
-        itemEl.ondrop = (e) => {
-          e.preventDefault();
-          if (draggedIndex !== null && draggedIndex !== index) {
-            const movedItem = fileList.splice(draggedIndex, 1)[0];
-            fileList.splice(index, 0, movedItem);
-            selectedIndex = index;
-            renderFileList();
-          }
-        };
-
-        itemEl.onclick = (e) => {
-          if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('select')) {
-            selectItem(index);
-          }
-        };
-
-        itemEl.innerHTML = `
-          <div class="file-main-row">
-            <div class="file-info">
-              <span class="drag-handle">☰</span>
-              <span class="${isImage ? 'badge badge-img' : 'badge'}">${index + 1}</span>
-              <span title="${file.name}">${file.name}</span>
-            </div>
-            <div class="btn-group">
-              <button class="btn-sm btn-del" onclick="removeItem(${index}, event)">✕</button>
-            </div>
-          </div>
-          <div class="file-opt-row">
-            ${!isImage ? `
-              <div class="opt-field">
-                <label>추출:</label>
-                <input type="text" placeholder="예: 1-3" value="${itemData.pageRange}" oninput="updateItemOption(${index}, 'pageRange', this.value)" />
-              </div>
-            ` : '<div class="opt-field"><span style="color:#94a3b8;">이미지 전체</span></div>'}
-            <div class="opt-field" style="max-width: 110px;">
-              <label>회전:</label>
-              <select onchange="updateItemOption(${index}, 'rotation', parseInt(this.value))">
-                <option value="0" ${itemData.rotation === 0 ? 'selected' : ''}>0도</option>
-                <option value="90" ${itemData.rotation === 90 ? 'selected' : ''}>90도</option>
-                <option value="180" ${itemData.rotation === 180 ? 'selected' : ''}>180도</option>
-                <option value="270" ${itemData.rotation === 270 ? 'selected' : ''}>270도</option>
-              </select>
-            </div>
-          </div>
-        `;
-        container.appendChild(itemEl);
-      });
-    }
-
-    function selectItem(index) {
-      selectedIndex = index;
-      renderFileList();
-      showPreview(fileList[index]);
-    }
-
-    function updateItemOption(index, key, value) {
-      if (fileList[index]) {
-        fileList[index][key] = value;
-        if (key === 'rotation' && selectedIndex === index) {
-          applyPreviewRotation(value);
-        }
-        if (key === 'pageRange' && selectedIndex === index) {
-          showPreview(fileList[index]);
-        }
-      }
-    }
-
-    function removeItem(index, e) {
-      if (e) e.stopPropagation();
-      fileList.splice(index, 1);
-      if (selectedIndex === index) {
-        selectedIndex = fileList.length > 0 ? Math.min(index, fileList.length - 1) : null;
-      } else if (selectedIndex > index) {
-        selectedIndex--;
-      }
-      renderFileList();
-      if (selectedIndex !== null) showPreview(fileList[selectedIndex]);
-      else showPreview(null);
-    }
-
-    async function showPreview(itemData) {
-      const previewBox = document.getElementById('previewBox');
-      previewBox.innerHTML = '';
-      previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
-
-      if (!itemData) {
-        previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>';
-        return;
-      }
-
-      const file = itemData.file;
-      const kind = itemData.kind || getFileKind(file);
-
-      if (kind === 'image') {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.createElement('img');
-          img.id = 'previewElement';
-          img.src = e.target.result;
-          img.style.transform = `rotate(${itemData.rotation}deg)`;
-          previewBox.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type === 'application/pdf') {
-        try {
-          const fileBytes = await file.arrayBuffer();
-          const loadingTask = pdfjsLib.getDocument({ data: fileBytes });
-          const pdf = await loadingTask.promise;
-
-          previewBox.classList.add('pdf-scroll-mode');
-          previewBox.innerHTML = '';
-
-          // 스크롤 중 현재 페이지 표시 배지
-          const badge = document.createElement('div');
-          badge.className = 'pdf-current-page-badge';
-          badge.textContent = `1 / ${pdf.numPages}`;
-          previewBox.appendChild(badge);
-
-          const scrollWrap = document.createElement('div');
-          scrollWrap.className = 'pdf-scroll-wrap';
-          previewBox.appendChild(scrollWrap);
-
-          // 첫 페이지 비율을 기본값으로 사용 (대부분 문서는 페이지 크기가 동일)
-          const firstPage = await pdf.getPage(1);
-          const firstViewport = firstPage.getViewport({ scale: 1 });
-          const defaultRatio = `${firstViewport.width} / ${firstViewport.height}`;
-
-          const renderObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) return;
-              const wrap = entry.target;
-              if (wrap.dataset.rendered === '1') return;
-              wrap.dataset.rendered = '1';
-              renderObserver.unobserve(wrap);
-              renderPdfPage(pdf, wrap, itemData);
-            });
-          }, { root: previewBox, rootMargin: '600px 0px', threshold: 0.01 });
-
-          const pageVisibilityObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                badge.textContent = `${entry.target.dataset.pageNum} / ${pdf.numPages}`;
-              }
-            });
-          }, { root: previewBox, threshold: [0.5] });
-
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const wrap = document.createElement('div');
-            wrap.className = 'pdf-page-wrap';
-            wrap.dataset.pageNum = String(i);
-            wrap.style.aspectRatio = defaultRatio;
-            wrap.innerHTML = `<div class="pdf-page-label">${i} / ${pdf.numPages}</div><div class="pdf-page-loading">불러오는 중...</div>`;
-            scrollWrap.appendChild(wrap);
-            renderObserver.observe(wrap);
-            pageVisibilityObserver.observe(wrap);
-          }
-
-          // 클릭했던 페이지(pageRange 첫 페이지)로 스크롤 이동
-          let jumpTo = 1;
-          if (itemData.pageRange && itemData.pageRange.trim() !== '') {
-            const firstPart = itemData.pageRange.split(',')[0].trim();
-            const parsedNum = parseInt(firstPart.split('-')[0].trim());
-            if (!isNaN(parsedNum) && parsedNum >= 1 && parsedNum <= pdf.numPages) {
-              jumpTo = parsedNum;
-            }
-          }
-          if (jumpTo > 1) {
-            const targetWrap = scrollWrap.children[jumpTo - 1];
-            if (targetWrap) targetWrap.scrollIntoView({ block: 'start' });
-          }
-        } catch (err) {
-          console.error("미리보기 로드 오류:", err);
-          previewBox.innerHTML = '<div class="preview-placeholder">미리보기를 불러올 수 없습니다.</div>';
-        }
-      } else if (kind === 'hwpx') {
-        await showHwpxPreview(file, previewBox);
-      }
-    }
-
-    // HWPX(ZIP+XML) 문서 미리보기 — 종이(A4) 모양 + 정렬/줄간격/글자서식 + 표 테두리·병합까지 반영
-    async function showHwpxPreview(file, previewBox) {
-      previewBox.classList.add('hwpx-text-mode');
-      previewBox.innerHTML = '<div class="preview-placeholder">한글 파일을 불러오는 중...</div>';
-
-      try {
-        const buffer = await file.arrayBuffer();
-        const zip = await JSZip.loadAsync(buffer);
-
-        const sectionNames = Object.keys(zip.files)
-          .filter(name => /Contents\/section\d+\.xml$/i.test(name))
-          .sort();
-
-        if (sectionNames.length === 0) {
-          await showHwpxPlainTextFallback(zip, previewBox);
-          return;
-        }
-
-        const headerEntries = zip.file(/Contents\/header\.xml$/i);
-        const headerXml = (headerEntries && headerEntries.length > 0) ? await headerEntries[0].async('string') : '';
-        const headerDoc = headerXml ? new DOMParser().parseFromString(headerXml, 'application/xml') : null;
-        const styles = parseHwpxStyles(headerDoc);
-
-        let pagesHtml = '';
-        for (const name of sectionNames) {
-          const xml = await zip.file(name).async('string');
-          const doc = new DOMParser().parseFromString(xml, 'application/xml');
-          if (doc.getElementsByTagName('parsererror').length > 0) continue;
-          pagesHtml += renderHwpxSection(doc, styles);
-        }
-
-        if (pagesHtml.trim() === '') {
-          await showHwpxPlainTextFallback(zip, previewBox);
-          return;
-        }
-
-        previewBox.innerHTML = `<div class="hwpx-render-wrap">${pagesHtml}</div>`;
-      } catch (err) {
-        console.error('HWPX 원본형 미리보기 오류, 텍스트 미리보기로 대체합니다:', err);
-        try {
-          const buffer2 = await file.arrayBuffer();
-          const zip2 = await JSZip.loadAsync(buffer2);
-          await showHwpxPlainTextFallback(zip2, previewBox);
-        } catch (err2) {
-          previewBox.innerHTML = '<div class="preview-placeholder">한글 파일 미리보기를 불러올 수 없습니다.</div>';
-        }
-      }
-    }
-
-    // 표/서식 렌더링이 불가능한 구조일 때의 텍스트 전용 대체 미리보기 (기존 방식)
-    async function showHwpxPlainTextFallback(zip, previewBox) {
-      const previewEntries = zip.file(/Preview\/PrvText\.txt$/i);
-      let text = '';
-
-      if (previewEntries && previewEntries.length > 0) {
-        const bytes = await previewEntries[0].async('uint8array');
-        text = decodeHwpxText(bytes);
-      }
-
-      if (!text || text.trim() === '') {
-        const sectionNames = Object.keys(zip.files)
-          .filter(name => /Contents\/section\d+\.xml$/i.test(name))
-          .sort();
-        let combined = '';
-        for (const name of sectionNames) {
-          const xml = await zip.file(name).async('string');
-          combined += xmlToPlainText(xml) + '\n\n';
-        }
-        text = combined.trim();
-      }
-
-      if (!text || text.trim() === '') {
-        previewBox.innerHTML = '<div class="preview-placeholder">본문 내용을 추출하지 못했습니다.<br>(암호화되었거나 지원되지 않는 구조일 수 있습니다)</div>';
-        return;
-      }
-
-      previewBox.innerHTML = `<div class="hwpx-text-preview">${escapeHtmlForPreview(text)}</div>`;
-    }
-
-    // ── HWPX 서식 렌더러 헬퍼 ──────────────────────────────────────
-
-    // 태그 접두어(hp:, hs: 등 생성기마다 다를 수 있음)와 무관하게 로컬 이름으로 매칭
-    function hwpxLocalName(el) {
-      const tn = el.tagName || el.nodeName || '';
-      const idx = tn.indexOf(':');
-      return idx >= 0 ? tn.slice(idx + 1) : tn;
-    }
-    function hwpxFindAll(root, name) {
-      return Array.from(root.getElementsByTagName('*')).filter(el => hwpxLocalName(el) === name);
-    }
-    function hwpxChildren(root, name) {
-      return Array.from(root.children || []).filter(el => hwpxLocalName(el) === name);
-    }
-    function hwpxFirst(root, name) {
-      return hwpxFindAll(root, name)[0] || null;
-    }
-
-    // HWPUNIT(1/7200 인치)을 mm로 변환 — 페이지 크기·여백·표 크기가 모두 이 단위를 씀
-    function hwpunitToMm(v) {
-      const n = parseFloat(v);
-      if (isNaN(n)) return 0;
-      return (n / 7200) * 25.4;
-    }
-
-    function parseHwpxStyles(headerDoc) {
-      const styles = { fonts: {}, charPr: {}, paraPr: {}, borderFill: {} };
-      if (!headerDoc) return styles;
-
-      hwpxFindAll(headerDoc, 'font').forEach((f) => {
-        const id = f.getAttribute('id');
-        if (id !== null) styles.fonts[id] = f.getAttribute('face') || '';
-      });
-
-      hwpxFindAll(headerDoc, 'borderFill').forEach((bf) => {
-        const id = bf.getAttribute('id');
-        if (id === null) return;
-        const left = hwpxFirst(bf, 'leftBorder');
-        styles.borderFill[id] = {
-          width: (left && left.getAttribute('width')) || '0.12mm',
-          color: (left && left.getAttribute('color')) ? ('#' + left.getAttribute('color')) : '#94a3b8'
-        };
-      });
-
-      hwpxFindAll(headerDoc, 'charPr').forEach((cp) => {
-        const id = cp.getAttribute('id');
-        if (id === null) return;
-        const heightRaw = cp.getAttribute('height');
-        const fontRef = hwpxFirst(cp, 'fontRef');
-        const fontId = fontRef ? fontRef.getAttribute('hangul') : null;
-        styles.charPr[id] = {
-          size: heightRaw ? (parseInt(heightRaw, 10) / 100) : 10,
-          bold: !!hwpxFirst(cp, 'bold'),
-          italic: !!hwpxFirst(cp, 'italic'),
-          color: cp.getAttribute('textColor') ? ('#' + cp.getAttribute('textColor')) : null,
-          fontFace: (fontId !== null && styles.fonts[fontId]) ? styles.fonts[fontId] : null
-        };
-      });
-
-      hwpxFindAll(headerDoc, 'paraPr').forEach((pp) => {
-        const id = pp.getAttribute('id');
-        if (id === null) return;
-        const alignEl = hwpxFirst(pp, 'align');
-        const lineSpacingEl = hwpxFirst(pp, 'lineSpacing');
-        styles.paraPr[id] = {
-          align: alignEl ? (alignEl.getAttribute('horizontal') || 'LEFT') : 'LEFT',
-          lineSpacing: lineSpacingEl ? (lineSpacingEl.getAttribute('value') || '160') : '160'
-        };
-      });
-
-      return styles;
-    }
-
-    function getHwpxPageSetup(doc) {
-      let width = 59528, height = 84188; // A4 기본값(HWPUNIT)
-      let m = { left: 8504, right: 8504, top: 5668, bottom: 4252 };
-
-      const pagePr = hwpxFindAll(doc, 'pagePr')[0];
-      if (pagePr) {
-        width = parseInt(pagePr.getAttribute('width'), 10) || width;
-        height = parseInt(pagePr.getAttribute('height'), 10) || height;
-        const marginEl = hwpxFirst(pagePr, 'margin');
-        if (marginEl) {
-          m = {
-            left: parseInt(marginEl.getAttribute('left'), 10) || m.left,
-            right: parseInt(marginEl.getAttribute('right'), 10) || m.right,
-            top: parseInt(marginEl.getAttribute('top'), 10) || m.top,
-            bottom: parseInt(marginEl.getAttribute('bottom'), 10) || m.bottom
-          };
-        }
-      }
-
-      return {
-        widthMm: hwpunitToMm(width),
-        heightMm: hwpunitToMm(height),
-        marginMm: {
-          left: hwpunitToMm(m.left), right: hwpunitToMm(m.right),
-          top: hwpunitToMm(m.top), bottom: hwpunitToMm(m.bottom)
-        }
-      };
-    }
-
-    function renderHwpxSection(doc, styles) {
-      const root = doc.documentElement;
-      const page = getHwpxPageSetup(doc);
-
-      let bodyHtml = '';
-      hwpxChildren(root, 'p').forEach((p) => { bodyHtml += renderHwpxParagraph(p, styles); });
-
-      // 최상위에 p가 바로 없고 한 단계 더 감싸져 있는 구조 대비
-      if (bodyHtml === '') {
-        Array.from(root.children).forEach((child) => {
-          hwpxChildren(child, 'p').forEach((p) => { bodyHtml += renderHwpxParagraph(p, styles); });
-        });
-      }
-
-      const pg = page.marginMm;
-      return `<div class="hwpx-page" style="width:${page.widthMm.toFixed(1)}mm;min-height:${page.heightMm.toFixed(1)}mm;padding:${pg.top.toFixed(1)}mm ${pg.right.toFixed(1)}mm ${pg.bottom.toFixed(1)}mm ${pg.left.toFixed(1)}mm;">${bodyHtml}</div>`;
-    }
-
-    function renderHwpxParagraph(pEl, styles) {
-      const paraPrId = pEl.getAttribute('paraPrIDRef');
-      const paraStyle = (paraPrId !== null && styles.paraPr[paraPrId]) || { align: 'LEFT', lineSpacing: '160' };
-      const alignMap = { LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFY: 'justify', DISTRIBUTE: 'justify', BOTH: 'justify' };
-      const alignCss = alignMap[paraStyle.align] || 'left';
-      const lineHeight = (parseInt(paraStyle.lineSpacing, 10) || 160) / 100;
-
-      let innerHtml = '';
-      let hasTable = false;
-
-      hwpxChildren(pEl, 'run').forEach((run) => {
-        const charPrId = run.getAttribute('charPrIDRef');
-        const charStyle = (charPrId !== null && styles.charPr[charPrId]) || {};
-
-        const tbl = hwpxChildren(run, 'tbl')[0];
-        if (tbl) {
-          hasTable = true;
-          innerHtml += renderHwpxTable(tbl, styles);
-          return;
-        }
-
-        hwpxChildren(run, 't').forEach((t) => {
-          const raw = t.textContent || '';
-          innerHtml += wrapHwpxCharStyle(escapeXmlText(raw), charStyle);
-        });
-      });
-
-      if (hasTable) return innerHtml;
-      if (innerHtml.trim() === '') innerHtml = '&nbsp;';
-
-      return `<p style="text-align:${alignCss};line-height:${lineHeight};margin:0 0 2px 0;">${innerHtml}</p>`;
-    }
-
-    function renderHwpxTable(tblEl, styles) {
-      const rows = hwpxFindAll(tblEl, 'tr');
-      let rowsHtml = '';
-
-      rows.forEach((tr) => {
-        let cellsHtml = '';
-        hwpxChildren(tr, 'tc').forEach((tc) => {
-          const cellSpan = hwpxFirst(tc, 'cellSpan');
-          const colSpan = cellSpan ? (parseInt(cellSpan.getAttribute('colSpan'), 10) || 1) : 1;
-          const rowSpan = cellSpan ? (parseInt(cellSpan.getAttribute('rowSpan'), 10) || 1) : 1;
-
-          const borderFillId = tc.getAttribute('borderFillIDRef');
-          const bf = (borderFillId !== null && styles.borderFill[borderFillId]) || { width: '0.12mm', color: '#94a3b8' };
-          const borderCss = `border:${bf.width} solid ${bf.color};`;
-
-          let cellInner = '';
-          const subList = hwpxFirst(tc, 'subList');
-          if (subList) {
-            hwpxChildren(subList, 'p').forEach((p) => { cellInner += renderHwpxParagraph(p, styles); });
-          }
-
-          cellsHtml += `<td colspan="${colSpan}" rowspan="${rowSpan}" style="${borderCss}padding:3px 5px;vertical-align:top;">${cellInner || '&nbsp;'}</td>`;
-        });
-        rowsHtml += `<tr>${cellsHtml}</tr>`;
-      });
-
-      return `<table class="hwpx-preview-table"><tbody>${rowsHtml}</tbody></table>`;
-    }
-
-    function wrapHwpxCharStyle(text, charStyle) {
-      const size = charStyle.size || 10;
-      const bold = charStyle.bold ? 'font-weight:bold;' : '';
-      const italic = charStyle.italic ? 'font-style:italic;' : '';
-      const color = charStyle.color ? `color:${charStyle.color};` : '';
-      const fontCss = charStyle.fontFace ? `font-family:${mapHwpxFont(charStyle.fontFace)};` : '';
-      return `<span style="font-size:${size}pt;${bold}${italic}${color}${fontCss}">${text}</span>`;
-    }
-
-    function mapHwpxFont(name) {
-      const map = [
-        ['함초롬바탕', "'바탕','Batang',serif"],
-        ['함초롬돋움', "'돋움','Dotum',sans-serif"],
-        ['신명조', "'바탕','Batang',serif"],
-        ['명조', "'바탕','Batang',serif"],
-        ['고딕', "'돋움','Dotum',sans-serif"],
-        ['굴림', "'굴림','Gulim',sans-serif"]
-      ];
-      for (const [key, css] of map) {
-        if (name && name.includes(key)) return css;
-      }
-      return 'sans-serif';
-    }
-
-    function escapeXmlText(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-
-    function decodeHwpxText(bytes) {
-      try {
-        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
-          return new TextDecoder('utf-16le').decode(bytes.slice(2));
-        }
-        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
-          return new TextDecoder('utf-16be').decode(bytes.slice(2));
-        }
-        const decoded = new TextDecoder('utf-16le').decode(bytes);
-        if (/\uFFFD/.test(decoded)) {
-          return new TextDecoder('utf-8').decode(bytes);
-        }
-        return decoded;
-      } catch (e) {
-        return new TextDecoder('utf-8').decode(bytes);
-      }
-    }
-
-    function xmlToPlainText(xml) {
-      return xml
-        .replace(/<[^>]+>/g, '\n')
-        .replace(/\n{2,}/g, '\n')
-        .split('\n')
-        .map(line => line.trim())
-        .filter(Boolean)
-        .join('\n');
-    }
-
-    function escapeHtmlForPreview(str) {
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>');
-    }
-
-    async function renderPdfPage(pdf, wrap, itemData) {
-      try {
-        const pageNum = parseInt(wrap.dataset.pageNum, 10);
-        const page = await pdf.getPage(pageNum);
-        const targetWidth = Math.max(wrap.clientWidth, 200);
-        const baseViewport = page.getViewport({ scale: 1 });
-        const dpr = window.devicePixelRatio || 1;
-        const scale = (targetWidth / baseViewport.width) * dpr;
-        const viewport = page.getViewport({ scale });
-
-        // 실제 페이지 비율이 기본값과 다르면 컨테이너 비율을 보정
-        wrap.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
-
-        const canvas = document.createElement('canvas');
-        canvas.className = 'pdf-page-canvas';
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        // 렌더링 시점의 최신 회전값을 반영 (사용자가 그 사이 회전값을 바꿨을 수 있음)
-        if (itemData.rotation) canvas.style.transform = `rotate(${itemData.rotation}deg)`;
-        const context = canvas.getContext('2d');
-        await page.render({ canvasContext: context, viewport }).promise;
-
-        const loading = wrap.querySelector('.pdf-page-loading');
-        if (loading) loading.remove();
-        wrap.appendChild(canvas);
-      } catch (err) {
-        console.error(`페이지 ${wrap.dataset.pageNum} 렌더링 오류:`, err);
-        const loading = wrap.querySelector('.pdf-page-loading');
-        if (loading) loading.textContent = '페이지를 불러올 수 없습니다.';
-      }
-    }
-
-    function applyPreviewRotation(deg) {
-      const el = document.getElementById('previewElement');
-      if (el) {
-        el.style.transform = `rotate(${deg}deg)`;
-        return;
-      }
-      // PDF 다중 페이지 미리보기: 이미 렌더링된 모든 페이지 캔버스에 즉시 회전 적용
-      const previewBox = document.getElementById('previewBox');
-      if (previewBox) {
-        previewBox.querySelectorAll('.pdf-page-canvas').forEach((canvas) => {
-          canvas.style.transform = deg ? `rotate(${deg}deg)` : '';
-        });
-      }
-    }
-
-    async function convertImageToPngBytes(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            canvas.toBlob((blob) => {
-              const blobReader = new FileReader();
-              blobReader.onloadend = () => resolve(blobReader.result);
-              blobReader.readAsArrayBuffer(blob);
-            }, 'image/png');
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // 4. PDF 병합 로직 (비밀번호 기능 제거됨)
-    async function mergeFiles() {
-      const statusDiv = document.getElementById('status');
-      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-
-      statusDiv.innerText = '⚡ 안전하게 병합 작업 중...';
-      statusDiv.style.color = '#2563eb';
-
-      try {
-        const mergedPdf = await PDFLib.PDFDocument.create();
-
-        for (let i = 0; i < fileList.length; i++) {
-          const itemData = fileList[i];
-          const file = itemData.file;
-          const kind = itemData.kind || getFileKind(file);
-          statusDiv.innerText = `⚡ 안전하게 병합 작업 중... (${i + 1}/${fileList.length})`;
-
-          if (kind === 'pdf') {
-            const fileBytes = await file.arrayBuffer();
-            const pdf = await PDFLib.PDFDocument.load(fileBytes);
-            const totalPages = pdf.getPageCount();
-
-            let pagesToCopy = [];
-            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
-              const parts = itemData.pageRange.split(',');
-              parts.forEach(part => {
-                if (part.includes('-')) {
-                  const [start, end] = part.split('-').map(num => parseInt(num.trim()) - 1);
-                  for (let p = start; p <= end; p++) {
-                    if (p >= 0 && p < totalPages) pagesToCopy.push(p);
-                  }
-                } else {
-                  const pageIdx = parseInt(part.trim()) - 1;
-                  if (pageIdx >= 0 && pageIdx < totalPages) pagesToCopy.push(pageIdx);
-                }
-              });
-            } else {
-              pagesToCopy = pdf.getPageIndices();
-            }
-
-            const copiedPages = await mergedPdf.copyPages(pdf, pagesToCopy);
-
-            copiedPages.forEach((page) => {
-              if (itemData.rotation !== 0) {
-                page.setRotation(PDFLib.degrees(page.getRotation().angle + itemData.rotation));
-              }
-              mergedPdf.addPage(page);
-            });
-
-          } else if (kind === 'image') {
-            const pngBytes = await convertImageToPngBytes(file);
-            const embeddedImage = await mergedPdf.embedPng(pngBytes);
-            const page = mergedPdf.addPage([595.28, 841.89]);
-            const { width, height } = page.getSize();
-            const imgDims = embeddedImage.scaleToFit(width - 40, height - 40);
-
-            if (itemData.rotation !== 0) {
-              page.setRotation(PDFLib.degrees(itemData.rotation));
-            }
-
-            page.drawImage(embeddedImage, {
-              x: (width - imgDims.width) / 2,
-              y: (height - imgDims.height) / 2,
-              width: imgDims.width,
-              height: imgDims.height,
-            });
-          }
-        }
-
-        const finalPdfBytes = await mergedPdf.save();
-
-        const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
-        const downloadUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = getOutputFileName();
-        a.click();
-
-        statusDiv.innerText = '✅ 모든 파일이 성공적으로 병합되었습니다!';
-        statusDiv.style.color = '#166534';
-      } catch (err) {
-        console.error("병합 중 오류 발생:", err);
-        statusDiv.innerText = '❌ 병합 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#ef4444';
-      }
-    }
-
-    // 5. 이미지 변환 - PDF는 2쪽이 넘어가도 한 장으로 합쳐지지 않고 1쪽씩 개별 이미지로 변환된다.
-    //    quality: 'high' → 고해상도 PNG(무손실), 'low' → 저해상도 JPEG(용량 절감)
-    async function exportAsImages(quality) {
-      const statusDiv = document.getElementById('status');
-      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-
-      const isHigh = quality === 'high';
-      const renderScale = isHigh ? 2.5 : 1.0;      // pdf.js 렌더링 배율 (기본 72dpi 기준)
-      const outputFormat = isHigh ? 'image/png' : 'image/jpeg';
-      const outputExt = isHigh ? 'png' : 'jpg';
-      const jpegQuality = 0.6; // low일 때만 사용
-
-      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn'), document.getElementById('compress-btn')];
-      buttons.forEach(b => { if (b) b.disabled = true; });
-      statusDiv.style.color = '#2563eb';
-
-      function canvasToBlob(canvas) {
-        return new Promise(resolve => {
-          if (isHigh) canvas.toBlob(resolve, outputFormat);
-          else canvas.toBlob(resolve, outputFormat, jpegQuality);
-        });
-      }
-
-      // 회전을 반영해 <img> 원본을 캔버스에 그린다.
-      async function renderImageFileToCanvas(file, rotationDeg) {
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-        const img = await new Promise((resolve) => {
-          const el = new Image();
-          el.onload = () => resolve(el);
-          el.src = dataUrl;
-        });
-        const swap = (rotationDeg === 90 || rotationDeg === 270);
-        const canvas = document.createElement('canvas');
-        canvas.width = swap ? img.height : img.width;
-        canvas.height = swap ? img.width : img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((rotationDeg || 0) * Math.PI / 180);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        return canvas;
-      }
-
-      try {
-        // 1) 병합 순서 그대로, PDF는 페이지 단위로 풀어서 "작업 목록"을 먼저 만든다.
-        const jobs = []; // { type:'image'|'pdfpage', file, rotation, pdf?, pageIndex? }
-        for (const itemData of fileList) {
-          const file = itemData.file;
-          const kind = itemData.kind || getFileKind(file);
-          const baseName = file.name.replace(/\.[^.]+$/, '');
-
-          if (kind === 'image') {
-            jobs.push({ type: 'image', file, rotation: itemData.rotation || 0, baseName });
-          } else if (kind === 'pdf') {
-            const fileBytes = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
-            const totalPages = pdf.numPages;
-
-            let pageNums = [];
-            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
-              itemData.pageRange.split(',').forEach(part => {
-                if (part.includes('-')) {
-                  const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
-                  for (let p = start; p <= end; p++) if (p >= 1 && p <= totalPages) pageNums.push(p);
-                } else {
-                  const p = parseInt(part.trim(), 10);
-                  if (p >= 1 && p <= totalPages) pageNums.push(p);
-                }
-              });
-            } else {
-              pageNums = Array.from({ length: totalPages }, (_, i) => i + 1);
-            }
-
-            pageNums.forEach((pageNum, idx) => {
-              jobs.push({ type: 'pdfpage', pdf, pageIndex: pageNum, rotation: itemData.rotation || 0, baseName, multiPage: pageNums.length > 1, pageOrdinal: idx + 1 });
-            });
-          }
-        }
-
-        if (jobs.length === 0) { alert('변환할 페이지가 없습니다.'); return; }
-
-        // 2) 작업 목록을 순서대로 렌더링해 이미지 blob으로 만든다.
-        const outputs = []; // { filename, blob }
-        for (let i = 0; i < jobs.length; i++) {
-          const job = jobs[i];
-          statusDiv.innerText = `⚡ 이미지 변환 중... (${i + 1}/${jobs.length})`;
-
-          let canvas;
-          if (job.type === 'image') {
-            canvas = await renderImageFileToCanvas(job.file, job.rotation);
-          } else {
-            const page = await job.pdf.getPage(job.pageIndex);
-            const viewport = page.getViewport({ scale: renderScale, rotation: job.rotation });
-            canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-          }
-
-          const blob = await canvasToBlob(canvas);
-          const pageSuffix = job.type === 'pdfpage' && job.multiPage ? `_p${String(job.pageOrdinal).padStart(2, '0')}` : '';
-          const seq = String(i + 1).padStart(3, '0');
-          outputs.push({ filename: `${seq}_${job.baseName}${pageSuffix}.${outputExt}`, blob });
-        }
-
-        // 3) 결과가 1장이면 이미지 파일 그대로, 여러 장이면 zip으로 묶어서 다운로드한다.
-        const qualityLabel = isHigh ? '고화질' : '저화질';
-        if (outputs.length === 1) {
-          const url = URL.createObjectURL(outputs[0].blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = outputs[0].filename;
-          a.click();
-          URL.revokeObjectURL(url);
-        } else {
-          const zip = new JSZip();
-          outputs.forEach(o => zip.file(o.filename, o.blob));
-          const zipBlob = await zip.generateAsync({ type: 'blob' });
-          const url = URL.createObjectURL(zipBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `이미지_변환_결과(${qualityLabel}).zip`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-
-        statusDiv.innerText = `✅ 총 ${outputs.length}장의 이미지(${qualityLabel})로 변환되었습니다!`;
-        statusDiv.style.color = '#166534';
-      } catch (err) {
-        console.error('이미지 변환 중 오류 발생:', err);
-        statusDiv.innerText = '❌ 이미지 변환 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#ef4444';
-      } finally {
-        buttons.forEach(b => { if (b) b.disabled = false; });
-      }
-    }
-
-    // 6. 최대 압축 병합 — 모든 페이지를 저해상도 JPEG로 다시 찍어(래스터화) PDF로
-    //    재조립한다. 원본 PDF에 이미 들어있는 고해상도 이미지/폰트 데이터를 그대로
-    //    복사하는 mergeFiles()와 달리, 화면마다 새로 낮은 해상도로 렌더링해서 용량을
-    //    최대한 줄인다. 단, 결과물의 글자는 더 이상 선택/검색되지 않는 이미지가 된다.
-    async function mergeFilesCompressed() {
-      const statusDiv = document.getElementById('status');
-      if (fileList.length === 0) { alert('파일을 1개 이상 선택해 주세요.'); return; }
-
-      const renderScale = 1.0;   // 압축 우선이라 낮은 해상도로 렌더링 (약 72dpi)
-      const jpegQuality = 0.35;  // 공격적인 압축률
-      const maxImageDim = 1200;  // 순수 이미지 파일은 긴 변 기준 최대 픽셀까지만 유지
-
-      const buttons = [document.getElementById('merge-btn'), document.getElementById('img-high-btn'), document.getElementById('img-low-btn'), document.getElementById('compress-btn')];
-      buttons.forEach(b => { if (b) b.disabled = true; });
-      statusDiv.style.color = '#2563eb';
-
-      function canvasToJpegBytes(canvas) {
-        return new Promise((resolve, reject) => {
-          canvas.toBlob(async (blob) => {
-            if (!blob) { reject(new Error('이미지 인코딩 실패')); return; }
-            resolve(new Uint8Array(await blob.arrayBuffer()));
-          }, 'image/jpeg', jpegQuality);
-        });
-      }
-
-      try {
-        // 1) 병합 순서 그대로, PDF는 페이지 단위로 풀어서 작업 목록을 만든다.
-        const jobs = [];
-        for (const itemData of fileList) {
-          const file = itemData.file;
-          const kind = itemData.kind || getFileKind(file);
-
-          if (kind === 'image') {
-            jobs.push({ type: 'image', file, rotation: itemData.rotation || 0 });
-          } else if (kind === 'pdf') {
-            const fileBytes = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
-            const totalPagesInFile = pdf.numPages;
-
-            let pageNums = [];
-            if (itemData.pageRange && itemData.pageRange.trim() !== '') {
-              itemData.pageRange.split(',').forEach(part => {
-                if (part.includes('-')) {
-                  const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
-                  for (let p = start; p <= end; p++) if (p >= 1 && p <= totalPagesInFile) pageNums.push(p);
-                } else {
-                  const p = parseInt(part.trim(), 10);
-                  if (p >= 1 && p <= totalPagesInFile) pageNums.push(p);
-                }
-              });
-            } else {
-              pageNums = Array.from({ length: totalPagesInFile }, (_, i) => i + 1);
-            }
-            pageNums.forEach(pageNum => jobs.push({ type: 'pdfpage', pdf, pageIndex: pageNum, rotation: itemData.rotation || 0 }));
-          }
-        }
-
-        if (jobs.length === 0) { alert('병합할 페이지가 없습니다.'); return; }
-
-        // 2) 작업 목록을 순서대로 낮은 해상도 JPEG로 렌더링해서 새 PDF에 한 쪽씩 추가한다.
-        const mergedPdf = await PDFLib.PDFDocument.create();
-
-        for (let i = 0; i < jobs.length; i++) {
-          const job = jobs[i];
-          statusDiv.innerText = `⚡ 최대 압축 병합 중... (${i + 1}/${jobs.length})`;
-
-          if (job.type === 'pdfpage') {
-            const page = await job.pdf.getPage(job.pageIndex);
-            const viewport = page.getViewport({ scale: renderScale, rotation: job.rotation });
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-
-            const jpegBytes = await canvasToJpegBytes(canvas);
-            const embedded = await mergedPdf.embedJpg(jpegBytes);
-            const pageWidthPt = viewport.width / renderScale;
-            const pageHeightPt = viewport.height / renderScale;
-            const outPage = mergedPdf.addPage([pageWidthPt, pageHeightPt]);
-            outPage.drawImage(embedded, { x: 0, y: 0, width: pageWidthPt, height: pageHeightPt });
-          } else {
-            // 이미지 파일: 회전 반영 + 긴 변 기준 다운스케일 후 A4 용지에 맞춰 삽입
-            const dataUrl = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(job.file);
-            });
-            const img = await new Promise((resolve) => {
-              const el = new Image();
-              el.onload = () => resolve(el);
-              el.src = dataUrl;
-            });
-
-            const swap = (job.rotation === 90 || job.rotation === 270);
-            const naturalW = swap ? img.height : img.width;
-            const naturalH = swap ? img.width : img.height;
-            const scaleDown = Math.min(1, maxImageDim / Math.max(naturalW, naturalH));
-            const outW = Math.max(1, Math.round(naturalW * scaleDown));
-            const outH = Math.max(1, Math.round(naturalH * scaleDown));
-
-            const canvas = document.createElement('canvas');
-            canvas.width = outW;
-            canvas.height = outH;
-            const ctx = canvas.getContext('2d');
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((job.rotation || 0) * Math.PI / 180);
-            ctx.scale(scaleDown, scaleDown);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-            const jpegBytes = await canvasToJpegBytes(canvas);
-            const embedded = await mergedPdf.embedJpg(jpegBytes);
-            const outPage = mergedPdf.addPage([595.28, 841.89]); // A4
-            const { width, height } = outPage.getSize();
-            const imgDims = embedded.scaleToFit(width - 40, height - 40);
-            outPage.drawImage(embedded, {
-              x: (width - imgDims.width) / 2,
-              y: (height - imgDims.height) / 2,
-              width: imgDims.width,
-              height: imgDims.height,
-            });
-          }
-        }
-
-        const finalPdfBytes = await mergedPdf.save({ useObjectStreams: true });
-        const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
-        const downloadUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = getOutputFileName();
-        a.click();
-        URL.revokeObjectURL(downloadUrl);
-
-        const sizeKB = (finalPdfBytes.length / 1024).toFixed(0);
-        statusDiv.innerText = `✅ 최대 압축 병합 완료! (총 ${jobs.length}쪽, 약 ${sizeKB}KB)`;
-        statusDiv.style.color = '#166534';
-      } catch (err) {
-        console.error('최대 압축 병합 중 오류 발생:', err);
-        statusDiv.innerText = '❌ 최대 압축 병합 중 오류가 발생했습니다.';
-        statusDiv.style.color = '#ef4444';
-      } finally {
-        buttons.forEach(b => { if (b) b.disabled = false; });
-      }
-    }
-  </script>
+    applyCardsToDOM(cards);
+  }
+  fetchAndRenderBanners();
+</script>
 </body>
 </html>
