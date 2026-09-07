@@ -584,16 +584,19 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
 </script>
 
 <!-- ============================================================
-     ZIP 자동 압축 해제 기능 (추가 스크립트)
+     ZIP 자동 압축 해제 기능 (추가 스크립트, 진단 로그 포함 버전)
      - 기존 코드는 건드리지 않고, dropZone/fileInput에 리스너를 추가로 붙여서
        zip 파일이 들어오면 JSZip으로 메모리에서 압축을 풀고
        그 안의 pdf/이미지/hwpx 파일만 골라 기존 addFiles()로 넘겨준다.
      - 기존 drop/change 핸들러는 zip을 만나면 getFileKind()가 null을 반환해
        그냥 무시하므로 서로 충돌하지 않는다.
+     - 문제 진단을 위해, 드롭/선택 이벤트가 발생하면 무조건(zip이 아니어도)
+       상태 표시줄과 콘솔에 "무엇이 감지됐는지" 남기도록 되어 있다.
      ============================================================ -->
 <script>
 (function () {
   const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'hwpx'];
+  const LOG_PREFIX = '[ZIP확장]';
 
   function extToMime(ext) {
     switch (ext) {
@@ -607,19 +610,20 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
   }
 
   function getExt(name) {
+    name = String(name || '').trim();
     const idx = name.lastIndexOf('.');
     return idx >= 0 ? name.slice(idx + 1).toLowerCase() : '';
   }
 
   function isZipFile(file) {
-    const ext = getExt(file.name || '');
-    return ext === 'zip' ||
-      file.type === 'application/zip' ||
-      file.type === 'application/x-zip-compressed';
+    const ext = getExt(file.name);
+    const type = (file.type || '').toLowerCase();
+    return ext === 'zip' || type.indexOf('zip') !== -1;
   }
 
   function setStatus(msg, isError) {
     const statusEl = document.getElementById('status');
+    console.log(LOG_PREFIX, msg);
     if (!statusEl) return;
     statusEl.innerText = msg;
     statusEl.style.color = isError ? '#dc2626' : '#166534';
@@ -627,6 +631,9 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
 
   // zip 하나를 열어서 지원되는 확장자의 파일만 File 객체 배열로 반환
   async function extractSupportedFilesFromZip(zipFile) {
+    if (typeof JSZip === 'undefined') {
+      throw new Error('JSZip 라이브러리가 로드되지 않았습니다 (인터넷 연결/광고차단 프로그램을 확인해주세요).');
+    }
     const buffer = await zipFile.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
 
@@ -637,12 +644,14 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
       .filter((entry) => !/(^|\/)__MACOSX(\/|$)/.test(entry.name))
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
+    console.log(LOG_PREFIX, 'zip 내부 항목:', entries.map((e) => e.name));
+
     const extracted = [];
     for (const entry of entries) {
       // 압축파일 내부 경로(폴더)는 무시하고 파일명만 사용
       const baseName = entry.name.split('/').pop();
       // 숨김 파일(.DS_Store, 리소스 포크 등 "."으로 시작하는 파일)은 제외
-      if (baseName.startsWith('.')) continue;
+      if (!baseName || baseName.startsWith('.')) continue;
       const ext = getExt(baseName);
       if (!SUPPORTED_EXTS.includes(ext)) continue; // 원하는 파일만 통과
 
@@ -653,10 +662,20 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     return extracted;
   }
 
-  // 드롭/선택된 파일들 중 zip만 골라 압축 해제 후 addFiles()로 전달
+  // 드롭/선택된 파일들을 검사해서, zip이면 압축 해제 후 addFiles()로 전달
+  // (진단을 위해 zip이 없어도 무엇이 감지됐는지 항상 상태창에 표시함)
   async function processIncomingFilesForZip(rawFiles) {
-    const zipFiles = Array.from(rawFiles).filter(isZipFile);
-    if (zipFiles.length === 0) return;
+    const allFiles = Array.from(rawFiles);
+    console.log(LOG_PREFIX, '이벤트 감지, 파일 목록:', allFiles.map((f) => f.name + ' / type=' + f.type));
+
+    const zipFiles = allFiles.filter(isZipFile);
+
+    if (zipFiles.length === 0) {
+      if (allFiles.length > 0) {
+        setStatus('ℹ️ zip으로 인식된 파일이 없습니다. (감지된 파일: ' + allFiles.map((f) => f.name).join(', ') + ')', false);
+      }
+      return;
+    }
 
     for (const zipFile of zipFiles) {
       try {
@@ -670,33 +689,56 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
 
         if (typeof addFiles === 'function') {
           addFiles(extracted); // 기존 전역 함수: 목록에 추가 + 미리보기 갱신
+        } else {
+          setStatus('❌ 내부 오류: addFiles 함수를 찾을 수 없습니다.', true);
+          continue;
         }
         setStatus('✅ "' + zipFile.name + '"에서 ' + extracted.length + '개 파일을 불러왔습니다.', false);
       } catch (err) {
-        console.error('ZIP 처리 중 오류:', err);
-        setStatus('❌ "' + zipFile.name + '" 압축 해제 중 오류가 발생했습니다.', true);
+        console.error(LOG_PREFIX, 'ZIP 처리 중 오류:', err);
+        setStatus('❌ "' + zipFile.name + '" 압축 해제 중 오류: ' + err.message, true);
       }
     }
   }
 
   const dropZoneEl = document.getElementById('dropZone');
   if (dropZoneEl) {
+    console.log(LOG_PREFIX, 'dropZone 리스너 등록됨');
     // 기존 preventDefaults 리스너와 별개로 추가되는 리스너 (충돌 없음)
     dropZoneEl.addEventListener('drop', (e) => {
+      console.log(LOG_PREFIX, 'drop 이벤트 발생');
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         processIncomingFilesForZip(e.dataTransfer.files);
+      } else {
+        console.log(LOG_PREFIX, 'drop 이벤트는 발생했지만 dataTransfer.files가 비어있음');
       }
     }, false);
+  } else {
+    console.error(LOG_PREFIX, 'dropZone 요소를 찾지 못했습니다.');
   }
 
   const fileInputEl = document.getElementById('fileInput');
   if (fileInputEl) {
     fileInputEl.addEventListener('change', (e) => {
+      console.log(LOG_PREFIX, 'fileInput change 이벤트 발생');
       if (e.target.files && e.target.files.length > 0) {
         processIncomingFilesForZip(e.target.files);
       }
     }, false);
+  } else {
+    console.error(LOG_PREFIX, 'fileInput 요소를 찾지 못했습니다.');
   }
+
+  // 이 스크립트 안에서 발생하는 예외/거부를 상태창에도 표시 (조용히 실패하는 것 방지)
+  window.addEventListener('error', (e) => {
+    console.error(LOG_PREFIX, '전역 오류:', e.error || e.message);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error(LOG_PREFIX, '처리되지 않은 Promise 거부:', e.reason);
+    setStatus('❌ 처리되지 않은 오류: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), true);
+  });
+
+  console.log(LOG_PREFIX, '스크립트 초기화 완료');
 })();
 </script>
 </body>
