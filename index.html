@@ -799,6 +799,53 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     return typeof window.showDirectoryPicker === 'function' && typeof window.showOpenFilePicker === 'function';
   }
 
+  // 현재 창이 iframe(미리보기 등) 안에 있는지 확인.
+  // cross-origin 부모일 경우 window.top 접근 자체가 막혀 예외가 나므로, 그것도 iframe으로 간주.
+  function isInsideIframe() {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true; // cross-origin으로 인해 접근 불가 = iframe 안에 있다고 판단
+    }
+  }
+
+  // iframe(미리보기) 안이라 File System Access API를 쓸 수 없을 때,
+  // 같은 페이지를 새 탭(최상위 창)으로 띄우고 안내 배너를 보여줌
+  function openInNewTabForBulkExtract() {
+    const url = new URL(location.href);
+    url.searchParams.set('bulkExtractHint', '1');
+    const newWin = window.open(url.toString(), '_blank');
+    if (!newWin) {
+      setStatus('❌ 새 탭을 열지 못했습니다. 브라우저의 팝업 차단을 해제한 뒤 다시 시도해주세요.', true);
+      return;
+    }
+    setStatus('📤 새 탭을 열었습니다. 새 탭에서 압축파일을 드래그앤드롭 한 뒤 "압축파일 일괄 해제" 버튼을 다시 눌러주세요. (미리보기 화면에서는 폴더 저장 기능을 사용할 수 없습니다.)', false);
+  }
+
+  // 새 탭이 ?bulkExtractHint=1 로 열렸으면, 드롭존에 안내 배너를 띄우고 강조 표시
+  function showBulkExtractHintIfNeeded() {
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.get('bulkExtractHint') !== '1') return;
+
+      const dropZoneEl = document.getElementById('dropZone');
+      if (!dropZoneEl) return;
+
+      const banner = document.createElement('div');
+      banner.textContent = '⬇️ 압축파일(zip)을 아래 영역에 끌어다 놓아주세요. 놓으신 뒤 "압축파일 일괄 해제" 버튼을 누르면 폴더에 저장할 수 있습니다.';
+      banner.style.cssText = 'background:#fef9c3;color:#854d0e;border:1.5px solid #eab308;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-weight:bold;text-align:center;';
+      dropZoneEl.parentNode.insertBefore(banner, dropZoneEl);
+
+      // 드롭존을 잠시 강조 표시
+      dropZoneEl.style.transition = 'box-shadow 0.3s';
+      dropZoneEl.style.boxShadow = '0 0 0 3px #eab308';
+      setTimeout(() => { dropZoneEl.style.boxShadow = ''; }, 3000);
+    } catch (e) {
+      console.error(LOG_PREFIX, 'bulkExtractHint 배너 표시 오류:', e);
+    }
+  }
+  showBulkExtractHintIfNeeded();
+
   // zip 파일 하나를 실제 디렉토리 핸들 안에 재귀적으로 압축 해제
   // (미리보기 목록과 달리 파일 형식 제한 없이 전부 그대로 추출함)
   async function extractZipIntoDirHandle(zipFile, dirHandle, depth) {
@@ -857,6 +904,11 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
   }
 
   async function handleBulkExtractZips() {
+    if (isInsideIframe()) {
+      openInNewTabForBulkExtract();
+      return;
+    }
+
     if (!supportsFileSystemAccess()) {
       setStatus('❌ 이 브라우저는 폴더에 직접 저장하는 기능을 지원하지 않습니다. Chrome 또는 Edge를 이용해주세요.', true);
       return;
