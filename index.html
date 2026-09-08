@@ -531,7 +531,7 @@
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
               <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX파일 미리보기만 가능)</span></span></li>
-              <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동 인식</strong> <span class="feat-desc">: zip 파일 그대로 즉시 미리보기 가능</span></span></li>
+              <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 압축해제</strong> <span class="feat-desc">: zip파일, 이중 zip 파일 모두 즉시 미리보기 및 폴더 일괄해제 가능</span></span></li>
             </ul>
           </div>
         </div>
@@ -539,7 +539,7 @@
         <div class="top-col-drop">
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <span class="drop-icon">📂</span>
-            <strong>클릭하거나 파일(PDF, 이미지, ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
+            <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
             <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwpx, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
@@ -741,6 +741,8 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     }
   }
 
+  const bulkExtractHintMode = new URLSearchParams(location.search).get('bulkExtractHint') === '1';
+
   const dropZoneEl = document.getElementById('dropZone');
   if (dropZoneEl) {
     console.log(LOG_PREFIX, 'dropZone 리스너 등록됨');
@@ -748,7 +750,16 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     dropZoneEl.addEventListener('drop', (e) => {
       console.log(LOG_PREFIX, 'drop 이벤트 발생');
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        processIncomingFilesForZip(e.dataTransfer.files);
+        const files = e.dataTransfer.files;
+        processIncomingFilesForZip(files);
+        if (bulkExtractHintMode) {
+          // 이미 "일괄 해제" 버튼을 눌러서 열린 창이므로, 드롭하자마자 바로 폴더 선택으로 진행
+          // (드롭 이벤트 자체가 사용자 제스처이므로 여기서 바로 호출해야 폴더 선택창이 정상적으로 열림)
+          const zips = Array.from(files).filter(isZipFile);
+          if (zips.length > 0) {
+            handleBulkExtractZips(zips);
+          }
+        }
       } else {
         console.log(LOG_PREFIX, 'drop 이벤트는 발생했지만 dataTransfer.files가 비어있음');
       }
@@ -770,6 +781,12 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     const files = e.target.files;
     if (files && files.length > 0) {
       processIncomingFilesForZip(files);
+      if (bulkExtractHintMode) {
+        const zips = Array.from(files).filter(isZipFile);
+        if (zips.length > 0) {
+          handleBulkExtractZips(zips);
+        }
+      }
     } else {
       console.log(LOG_PREFIX, 'fileInput files가 비어있음 (선택 취소 등)');
     }
@@ -899,7 +916,7 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     return { fileCount };
   }
 
-  async function handleBulkExtractZips() {
+  async function handleBulkExtractZips(providedZipFiles) {
     if (isInsideIframe()) {
       openInNewTabForBulkExtract();
       return;
@@ -913,7 +930,12 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     let zipFilesToExtract;
     let sourceDescription;
 
-    if (pendingZipFiles.length > 0) {
+    if (providedZipFiles && providedZipFiles.length > 0) {
+      // 방금 드롭/선택한 zip을 곧바로 사용 (힌트 모드: 사용자 제스처를 최대한 살리기 위해
+      // 미리보기 추출을 기다리지 않고 바로 폴더 선택으로 진행)
+      zipFilesToExtract = providedZipFiles;
+      sourceDescription = '드롭한 압축파일 ' + zipFilesToExtract.length + '개';
+    } else if (pendingZipFiles.length > 0) {
       // 드롭존/파일선택으로 이미 들어와 있던 zip을 그대로 사용 (파일 선택 창을 다시 띄우지 않음)
       zipFilesToExtract = pendingZipFiles.slice();
       sourceDescription = '드롭한 압축파일 ' + zipFilesToExtract.length + '개';
