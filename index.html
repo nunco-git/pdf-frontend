@@ -461,8 +461,9 @@
     }
     .output-name-row input:focus { outline: none; border-color: #2563eb; }
     .main-btn-row { display: flex; gap: 10px; align-items: stretch; }
-    .main-btn-row .btn-main { flex: 2; width: auto; }
-    .main-btn-row .btn-compress { flex: 1; width: auto; }
+    .main-btn-row .btn-main { flex: 5; width: auto; }
+    .main-btn-row .btn-secondary { flex: 3; width: auto; }
+    .main-btn-row .btn-compress { flex: 2; width: auto; }
     .btn-secondary-row { display: flex; gap: 10px; }
     .btn-secondary { flex: 1; background-color: white; color: #2563eb; border: 1.5px solid #2563eb; padding: 12px; font-size: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
     .btn-secondary:hover { background-color: #eff6ff; }
@@ -502,7 +503,7 @@
       .file-select-box strong { font-size: 14px; }
       .btn-secondary-row { flex-direction: column; }
       .main-btn-row { flex-direction: column; }
-      .main-btn-row .btn-main, .main-btn-row .btn-compress { flex: 1; }
+      .main-btn-row .btn-main, .main-btn-row .btn-secondary, .main-btn-row .btn-compress { flex: 1; }
       .file-info { max-width: 55vw; }
       .opt-field { min-width: 90px; }
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
@@ -525,7 +526,7 @@
         <div class="top-col-guide">
           <div class="security-banner">
             <div class="security-banner-header">
-              <strong>🔒 개인정보 및 문서 보안 100% 보장</strong>
+              <strong>🔒 개인정보 유출 걱정 없음</strong>
               <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
             </div>
             <ul class="security-features">
@@ -567,10 +568,8 @@
         </div>
         <div class="main-btn-row">
           <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
+          <button class="btn-secondary" id="bulk-extract-btn" onclick="handleBulkExtractZips()" disabled>🗃️ 압축파일 일괄 해제 (폴더로 저장)</button>
           <button class="btn-compress" id="compress-btn" onclick="mergeFilesCompressed()" disabled>🗜️ 최대 압축 병합</button>
-        </div>
-        <div class="bulk-extract-row" style="margin-top: 8px;">
-          <button class="btn-secondary" id="bulk-extract-btn" style="width: 100%;" onclick="handleBulkExtractZips()">🗃️ 압축파일 일괄 해제 (폴더로 저장)</button>
         </div>
         <div class="compress-note">최대 압축 병합: 모든 페이지를 저해상도 이미지로 다시 찍어 압축합니다 — 글자를 선택·검색할 수 없게 됩니다.</div>
         <div class="btn-secondary-row">
@@ -858,6 +857,28 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     }
   }
   showBulkExtractHintIfNeeded();
+
+  // 파일 목록(fileListItems)의 변화(추가/삭제)를 감지해서
+  // "압축파일 일괄 해제" 버튼을 최대 압축 병합 버튼처럼 목록이 비어있으면 비활성화(무채색),
+  // 목록에 뭔가 있으면 활성화(색상 표시)되도록 자동으로 맞춰줌
+  function updateBulkExtractButtonState() {
+    const btn = document.getElementById('bulk-extract-btn');
+    const listEl = document.getElementById('fileListItems');
+    if (!btn || !listEl) return;
+    // fileListItems는 비어있을 때 항상 ".empty-msg" 안내 문구를 자식으로 갖고 있으므로
+    // 자식 개수가 아니라 이 안내 문구의 존재 여부로 "비어있음"을 판단해야 정확하다.
+    const isEmpty = !!listEl.querySelector('.empty-msg');
+    btn.disabled = isEmpty;
+  }
+
+  const fileListItemsEl = document.getElementById('fileListItems');
+  if (fileListItemsEl) {
+    const bulkExtractBtnObserver = new MutationObserver(updateBulkExtractButtonState);
+    bulkExtractBtnObserver.observe(fileListItemsEl, { childList: true });
+  } else {
+    console.error(LOG_PREFIX, 'fileListItems 요소를 찾지 못해 버튼 상태 자동 감지를 등록하지 못했습니다.');
+  }
+  updateBulkExtractButtonState(); // 초기 상태 반영
 
   // zip 파일 하나를 실제 디렉토리 핸들 안에 재귀적으로 압축 해제
   // (미리보기 목록과 달리 파일 형식 제한 없이 전부 그대로 추출함)
