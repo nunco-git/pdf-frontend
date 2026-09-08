@@ -695,6 +695,9 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     return extracted;
   }
 
+  // 드롭/선택으로 들어온 zip 원본 파일들을 기억해둠 (일괄 해제 버튼에서 재사용)
+  const pendingZipFiles = [];
+
   // 드롭/선택된 파일들을 검사해서, zip이면 압축 해제 후 addFiles()로 전달
   // (진단을 위해 zip이 없어도 무엇이 감지됐는지 항상 상태창에 표시함)
   async function processIncomingFilesForZip(rawFiles) {
@@ -715,8 +718,12 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
         setStatus('📦 "' + zipFile.name + '" 압축 해제 중...', false);
         const extracted = await extractSupportedFilesFromZip(zipFile);
 
+        // 미리보기용 추출 결과와 무관하게, 드롭된 zip 원본은 "일괄 해제" 버튼에서
+        // 다시 사용할 수 있도록 항상 기억해둔다 (미리보기 가능한 파일이 없었어도 마찬가지).
+        pendingZipFiles.push(zipFile);
+
         if (extracted.length === 0) {
-          setStatus('⚠️ "' + zipFile.name + '" 안에 PDF/이미지/HWPX 파일이 없습니다.', true);
+          setStatus('⚠️ "' + zipFile.name + '" 안에 PDF/이미지/HWPX 파일이 없습니다. (압축 해제 버튼으로는 여전히 사용 가능)', true);
           continue;
         }
 
@@ -855,18 +862,33 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
       return;
     }
 
-    let fileHandles;
-    try {
-      fileHandles = await window.showOpenFilePicker({
-        multiple: true,
-        excludeAcceptAllOption: false,
-        types: [{ description: 'ZIP 파일', accept: { 'application/zip': ['.zip'] } }],
-      });
-    } catch (err) {
-      if (err && err.name === 'AbortError') return; // 사용자가 선택 취소함
-      console.error(LOG_PREFIX, '파일 선택 오류:', err);
-      setStatus('❌ 압축파일 선택 중 오류가 발생했습니다.', true);
-      return;
+    let zipFilesToExtract;
+    let sourceDescription;
+
+    if (pendingZipFiles.length > 0) {
+      // 드롭존/파일선택으로 이미 들어와 있던 zip을 그대로 사용 (파일 선택 창을 다시 띄우지 않음)
+      zipFilesToExtract = pendingZipFiles.slice();
+      sourceDescription = '드롭한 압축파일 ' + zipFilesToExtract.length + '개';
+    } else {
+      // 기억해둔 zip이 없으면 새로 압축파일을 선택하는 창을 띄움
+      let fileHandles;
+      try {
+        fileHandles = await window.showOpenFilePicker({
+          multiple: true,
+          excludeAcceptAllOption: false,
+          types: [{ description: 'ZIP 파일', accept: { 'application/zip': ['.zip'] } }],
+        });
+      } catch (err) {
+        if (err && err.name === 'AbortError') return; // 사용자가 선택 취소함
+        console.error(LOG_PREFIX, '파일 선택 오류:', err);
+        setStatus('❌ 압축파일 선택 중 오류: [' + (err && err.name) + '] ' + (err && err.message), true);
+        return;
+      }
+      zipFilesToExtract = [];
+      for (const handle of fileHandles) {
+        zipFilesToExtract.push(await handle.getFile());
+      }
+      sourceDescription = '새로 선택한 압축파일 ' + zipFilesToExtract.length + '개';
     }
 
     let dirHandle;
@@ -875,14 +897,13 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     } catch (err) {
       if (err && err.name === 'AbortError') return; // 사용자가 선택 취소함
       console.error(LOG_PREFIX, '폴더 선택 오류:', err);
-      setStatus('❌ 저장할 폴더 선택 중 오류가 발생했습니다.', true);
+      setStatus('❌ 저장할 폴더 선택 중 오류: [' + (err && err.name) + '] ' + (err && err.message), true);
       return;
     }
 
     let totalFiles = 0;
-    for (const handle of fileHandles) {
+    for (const file of zipFilesToExtract) {
       try {
-        const file = await handle.getFile();
         setStatus('📦 "' + file.name + '" 압축 해제 중...', false);
         // zip 파일마다 이름을 딴 실제 하위 폴더를 만들어 그 안에 풀어줌 (여러 zip 간 파일명 충돌 방지)
         const zipBaseDirName = file.name.replace(/\.zip$/i, '');
@@ -890,15 +911,24 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
         const result = await extractZipIntoDirHandle(file, zipOutputDir, 1);
         totalFiles += result.fileCount;
       } catch (err) {
-        console.error(LOG_PREFIX, '"' + handle.name + '" 처리 중 오류:', err);
-        setStatus('❌ "' + handle.name + '" 압축 해제 중 오류: ' + err.message, true);
+        console.error(LOG_PREFIX, '"' + file.name + '" 처리 중 오류:', err);
+        setStatus('❌ "' + file.name + '" 압축 해제 중 오류: ' + err.message, true);
       }
     }
 
-    setStatus('✅ 압축파일 ' + fileHandles.length + '개에서 총 ' + totalFiles + '개 파일을 "' + dirHandle.name + '" 폴더에 저장했습니다.', false);
+    setStatus('✅ ' + sourceDescription + '에서 총 ' + totalFiles + '개 파일을 "' + dirHandle.name + '" 폴더에 저장했습니다.', false);
   }
 
   window.handleBulkExtractZips = handleBulkExtractZips;
+
+  // "초기화" 버튼을 누르면 기억해둔 드롭 zip 목록도 함께 비움
+  if (typeof window.resetAll === 'function') {
+    const originalResetAll = window.resetAll;
+    window.resetAll = function () {
+      pendingZipFiles.length = 0;
+      return originalResetAll.apply(this, arguments);
+    };
+  }
 
   console.log(LOG_PREFIX, '스크립트 초기화 완료');
 })();
