@@ -223,8 +223,8 @@
     }
 
     .file-list-container {
-      flex: 0 0 calc(33% - 7px);
-      min-width: 220px;
+      flex: 0 0 15%;
+      min-width: 90px;
       max-width: 80%;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
@@ -234,7 +234,7 @@
       max-height: 90vh;
       overflow: auto;
       padding: 10px;
-      resize: both;
+      resize: horizontal;
     }
     .file-list-container:hover { border-color: #93c5fd; box-shadow: 0 6px 16px rgba(37,99,235,0.1); }
 
@@ -295,9 +295,8 @@
     .btn-del { color: #ef4444; border-color: #fca5a5; }
 
     .preview-panel {
-      flex: 0 0 calc(66% - 7px);
+      flex: 1 1 0%;
       min-width: 260px;
-      max-width: 85%;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       background: #f8fafc;
@@ -312,7 +311,28 @@
       resize: both;
     }
     .preview-panel:hover { border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(15,23,42,0.08); }
-    .preview-title { font-size: 14px; font-weight: bold; color: #334155; margin-bottom: 8px; width: 100%; text-align: center; }
+    .preview-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 8px; }
+    .preview-title { font-size: 14px; font-weight: bold; color: #334155; text-align: left; }
+    .preview-zoom-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .zoom-btn {
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #334155;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+    .zoom-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+    .zoom-fit-btn { width: auto; padding: 0 8px; font-size: 11.5px; }
+    .zoom-label { font-size: 12px; color: #64748b; min-width: 38px; text-align: center; }
     .preview-box {
       width: 100%;
       height: 100%;
@@ -323,6 +343,7 @@
       justify-content: center;
       overflow: hidden;
       position: relative;
+      transition: transform 0.15s ease;
     }
     .preview-box img, .preview-box canvas {
       width: 100%;
@@ -569,7 +590,15 @@
         </div>
 
         <div class="preview-panel">
-          <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(모서리를 드래그하여 크기 조절)</span></div>
+          <div class="preview-title-row">
+            <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(모서리를 드래그하여 크기 조절)</span></div>
+            <div class="preview-zoom-controls">
+              <button type="button" class="zoom-btn" id="preview-zoom-out-btn" title="축소">－</button>
+              <span class="zoom-label" id="preview-zoom-label">100%</span>
+              <button type="button" class="zoom-btn" id="preview-zoom-in-btn" title="확대">＋</button>
+              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-zoom-reset-btn" title="화면에 맞춤">↔ 맞춤</button>
+            </div>
+          </div>
           <div class="preview-box" id="previewBox">
             <div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>
           </div>
@@ -876,6 +905,49 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     });
   } else {
     console.error(FOLDER_LOG_PREFIX, 'fileListItems 요소를 찾지 못해 더블클릭 열기를 등록하지 못했습니다.');
+  }
+
+  // ============================================================
+  // 미리보기 확대/축소 ("－" / "＋" / "↔ 맞춤" 버튼)
+  // - 미리보기 렌더링 코드(이미지/PDF/HWPX) 자체는 건드리지 않고,
+  //   #previewBox 전체에 CSS transform: scale()을 씌워서 확대/축소한다.
+  //   (확대해서 넘치는 부분은 .preview-panel의 overflow:auto로 스크롤해서 볼 수 있음)
+  // - 다른 파일을 선택하거나 회전 등으로 미리보기 내용 자체가 새로 그려지면
+  //   MutationObserver가 이를 감지해서 배율을 자동으로 100%(맞춤)로 되돌린다.
+  // ============================================================
+  const PREVIEW_ZOOM_MIN = 0.25;
+  const PREVIEW_ZOOM_MAX = 4;
+  const PREVIEW_ZOOM_STEP = 0.25;
+  let previewZoom = 1;
+
+  function applyPreviewZoom() {
+    const box = document.getElementById('previewBox');
+    const label = document.getElementById('preview-zoom-label');
+    if (box) {
+      box.style.transformOrigin = 'top center';
+      box.style.transform = previewZoom === 1 ? '' : 'scale(' + previewZoom + ')';
+    }
+    if (label) label.textContent = Math.round(previewZoom * 100) + '%';
+  }
+
+  function setPreviewZoom(nextZoom) {
+    previewZoom = Math.min(PREVIEW_ZOOM_MAX, Math.max(PREVIEW_ZOOM_MIN, nextZoom));
+    applyPreviewZoom();
+  }
+
+  const previewZoomInBtn = document.getElementById('preview-zoom-in-btn');
+  const previewZoomOutBtn = document.getElementById('preview-zoom-out-btn');
+  const previewZoomResetBtn = document.getElementById('preview-zoom-reset-btn');
+  if (previewZoomInBtn) previewZoomInBtn.addEventListener('click', () => setPreviewZoom(previewZoom + PREVIEW_ZOOM_STEP));
+  if (previewZoomOutBtn) previewZoomOutBtn.addEventListener('click', () => setPreviewZoom(previewZoom - PREVIEW_ZOOM_STEP));
+  if (previewZoomResetBtn) previewZoomResetBtn.addEventListener('click', () => setPreviewZoom(1));
+
+  const previewBoxForZoomEl = document.getElementById('previewBox');
+  if (previewBoxForZoomEl) {
+    // 새 파일 선택 등으로 미리보기 내용이 통째로 다시 그려질 때(자식 요소 변경)만 감지되고,
+    // 같은 파일 안에서의 회전(기존 요소의 style만 바뀜)에는 반응하지 않는다.
+    const previewZoomResetObserver = new MutationObserver(() => setPreviewZoom(1));
+    previewZoomResetObserver.observe(previewBoxForZoomEl, { childList: true });
   }
 
   // zip 하나를 열어서 지원되는 확장자의 파일만 File 객체 배열로 반환
