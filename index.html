@@ -216,10 +216,33 @@
       display: flex;
       flex-wrap: nowrap;
       align-items: stretch;
-      gap: 14px;
+      gap: 0; /* 목록/미리보기 사이 간격은 이제 아래 조절창(splitter)이 담당 */
       margin-bottom: 8px;
       flex: 1 1 80%;
       min-height: 0;
+    }
+
+    /* ── 목록창 / 미리보기창 사이의 드래그 조절창 ── */
+    .editor-splitter {
+      flex: 0 0 14px;
+      align-self: stretch;
+      position: relative;
+      cursor: col-resize;
+      touch-action: none;
+    }
+    .editor-splitter::before {
+      content: '';
+      position: absolute;
+      top: 8px; bottom: 8px; left: 50%;
+      width: 4px;
+      background: #cbd5e1;
+      border-radius: 3px;
+      transform: translateX(-50%);
+      transition: background 0.15s, width 0.15s;
+    }
+    .editor-splitter:hover::before, .editor-splitter.dragging::before { background: #2563eb; width: 5px; }
+    @media (max-width: 1180px) {
+      .editor-splitter { display: none; }
     }
 
     .file-list-container {
@@ -234,7 +257,6 @@
       max-height: 90vh;
       overflow: auto;
       padding: 10px;
-      resize: horizontal;
     }
     .file-list-container:hover { border-color: #93c5fd; box-shadow: 0 6px 16px rgba(37,99,235,0.1); }
 
@@ -308,7 +330,7 @@
       min-height: 200px;
       max-height: 90vh;
       overflow: auto;
-      resize: both;
+      resize: vertical;
     }
     .preview-panel:hover { border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(15,23,42,0.08); }
     .preview-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 8px; }
@@ -589,9 +611,11 @@
           </div>
         </div>
 
+        <div class="editor-splitter" id="editorSplitter" title="드래그하여 목록/미리보기 폭 조절" role="separator" aria-orientation="vertical"></div>
+
         <div class="preview-panel">
           <div class="preview-title-row">
-            <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(모서리를 드래그하여 크기 조절)</span></div>
+            <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(가운데 조절창을 드래그하면 폭 조절)</span></div>
             <div class="preview-zoom-controls">
               <button type="button" class="zoom-btn" id="preview-zoom-out-btn" title="축소">－</button>
               <span class="zoom-label" id="preview-zoom-label">100%</span>
@@ -1346,6 +1370,72 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
   }
 
   console.log(LOG_PREFIX, '스크립트 초기화 완료');
+})();
+</script>
+
+<!-- ============================================================
+     목록창 / 미리보기창 사이 드래그 조절창(splitter)
+     - 목록창의 flex-basis를 픽셀 단위로 직접 조절해서 폭을 바꾸고,
+       미리보기창(flex:1)은 남은 공간을 자동으로 채운다.
+     - 1180px 이하(세로로 쌓이는 모바일 레이아웃)에서는 조절창 자체를
+       숨기고, 이전에 데스크톱에서 조절해둔 값도 초기화한다.
+     ============================================================ -->
+<script>
+(function () {
+  const splitter = document.getElementById('editorSplitter');
+  const fileListEl = document.getElementById('fileListContainer');
+  if (!splitter || !fileListEl) return;
+  const layoutEl = fileListEl.parentElement; // .editor-layout
+
+  const MIN_WIDTH = 90; // .file-list-container의 min-width와 맞춤
+  let dragging = false;
+
+  function clampWidth(px) {
+    const maxWidth = layoutEl.getBoundingClientRect().width * 0.8; // .file-list-container의 max-width: 80%와 맞춤
+    return Math.min(maxWidth, Math.max(MIN_WIDTH, px));
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const layoutRect = layoutEl.getBoundingClientRect();
+    const newWidth = clampWidth(clientX - layoutRect.left);
+    fileListEl.style.flex = '0 0 ' + newWidth + 'px';
+  }
+
+  function startDragging(e) {
+    dragging = true;
+    splitter.classList.add('dragging');
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function stopDragging() {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove('dragging');
+  }
+
+  splitter.addEventListener('mousedown', startDragging);
+  splitter.addEventListener('touchstart', startDragging, { passive: false });
+  document.addEventListener('mousemove', onPointerMove);
+  document.addEventListener('touchmove', onPointerMove, { passive: true });
+  document.addEventListener('mouseup', stopDragging);
+  document.addEventListener('touchend', stopDragging);
+  document.addEventListener('touchcancel', stopDragging);
+
+  // 모바일 레이아웃(세로로 쌓임)으로 바뀌면, 데스크톱에서 드래그로 정해둔
+  // 픽셀 폭이 그대로 남아 있으면 세로 배치에서 높이로 잘못 적용될 수 있어
+  // 폭 지정을 초기화해서 원래 스타일시트 기본값(모바일용 height 등)을 따르게 한다.
+  const stackedLayoutQuery = window.matchMedia('(max-width: 1180px)');
+  function handleLayoutModeChange(mq) {
+    if (mq.matches) fileListEl.style.flex = '';
+  }
+  handleLayoutModeChange(stackedLayoutQuery);
+  if (stackedLayoutQuery.addEventListener) {
+    stackedLayoutQuery.addEventListener('change', handleLayoutModeChange);
+  } else if (stackedLayoutQuery.addListener) {
+    stackedLayoutQuery.addListener(handleLayoutModeChange); // 구형 브라우저 호환
+  }
 })();
 </script>
 </body>
