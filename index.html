@@ -100,7 +100,6 @@
     .security-banner:hover { border-color: #86efac; box-shadow: 0 6px 16px rgba(22,163,74,0.12); transform: translateY(-1px); }
     .security-banner-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
     .security-banner-header strong { margin-bottom: 0; }
-    .security-banner-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .security-banner strong { font-size: 16px; display: block; margin-bottom: 6px; color: #15803d; letter-spacing: -0.2px; }
 
     .security-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -577,20 +576,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .btn-list-mode {
-      padding: 5px 14px;
-      background: white;
-      border: 1.5px solid #2563eb;
-      color: #2563eb;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: background 0.15s, color 0.15s;
-    }
-    .btn-list-mode:hover { background: #eff6ff; }
     .main-btn-row { display: flex; gap: 10px; align-items: stretch; }
     .main-btn-row .btn-main { flex: 5; width: auto; }
     .main-btn-row .btn-secondary { flex: 3; width: auto; }
@@ -658,10 +643,7 @@
           <div class="security-banner">
             <div class="security-banner-header">
               <strong>🔒 개인정보 유출 걱정 없음</strong>
-              <div class="security-banner-actions">
-                <button type="button" class="btn-list-mode" id="list-mode-btn" onclick="toggleListPersistMode()">📌 목록 유지</button>
-                <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
-              </div>
+              <button class="btn-reset" id="reset-btn" onclick="resetAll()" disabled>🗑️ 초기화</button>
             </div>
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
@@ -1072,44 +1054,6 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
   }
 
   // ============================================================
-  // "초기화" 버튼 왼쪽의 목록 유지/자동비우기 토글 버튼 (독립 사이트용)
-  // - 목록 유지(기본값): 아무 것도 하지 않음(그냥 평소처럼 목록이 유지됨).
-  // - 목록 자동비우기: 이 브라우저 탭이 백그라운드로 전환되면(다른 탭/창으로
-  //   전환하거나 화면을 최소화하면) 자동으로 목록을 비운다 — 자리를 비웠을 때
-  //   민감한 파일 목록이 화면에 계속 남아있지 않도록 하는 용도.
-  //   ⚠️ 포털 안에 iframe으로 넣었을 때는, 포털이 단순히 iframe을
-  //   display:none으로 숨기는 것만으로는 이 이벤트가 발생하지 않을 수 있다
-  //   (브라우저마다 다름) — 그 경우 실제 브라우저 탭 전환/전체 창 최소화에만
-  //   반응한다.
-  // ============================================================
-  let keepFileListOnHide = true; // 기본값: 목록 유지
-
-  function updateListModeButton() {
-    const btn = document.getElementById('list-mode-btn');
-    if (!btn) return;
-    if (keepFileListOnHide) {
-      btn.textContent = '📌 목록 유지';
-      btn.title = '화면에서 벗어나도(다른 탭 전환 등) 지금 목록을 그대로 둡니다. (누르면 자동비우기로 전환)';
-    } else {
-      btn.textContent = '🧹 목록 자동비우기';
-      btn.title = '다른 탭으로 전환하거나 화면을 벗어나면 목록을 자동으로 비웁니다. (누르면 목록 유지로 전환)';
-    }
-  }
-
-  function toggleListPersistMode() {
-    keepFileListOnHide = !keepFileListOnHide;
-    updateListModeButton();
-  }
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && !keepFileListOnHide && typeof window.resetAll === 'function') {
-      window.resetAll();
-    }
-  });
-
-  updateListModeButton();
-
-  // ============================================================
   // 파일 목록에서 더블클릭하면 "연결된 기본 프로그램으로 실행"하고 싶지만,
   // 브라우저 보안 정책상 웹페이지가 OS의 기본 프로그램을 직접 실행시킬 수는 없다.
   // 대신 가장 비슷하게: PDF/이미지는 새 탭에서 바로 열어 보여주고(브라우저 내장 뷰어),
@@ -1396,9 +1340,10 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
   // zip 하나를 열어서 지원되는 확장자의 파일만 File 객체 배열로 반환
   // 내부에 또 zip이 있으면 재귀적으로 풀어서 폴더 경로를 파일명에 포함시킨다.
   const MAX_ZIP_DEPTH = 6; // 압축폭탄/자기참조 방지용 재귀 깊이 제한
-  async function extractSupportedFilesFromZip(zipFile, folderPath, depth) {
+  async function extractSupportedFilesFromZip(zipFile, folderPath, depth, errorsCollector) {
     folderPath = folderPath || '';
     depth = depth || 1;
+    errorsCollector = errorsCollector || [];
 
     if (typeof JSZip === 'undefined') {
       throw new Error('JSZip 라이브러리가 로드되지 않았습니다 (인터넷 연결/광고차단 프로그램을 확인해주세요).');
@@ -1436,10 +1381,11 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
           const nestedFile = new File([nestedBlob], baseName, { type: 'application/zip' });
           const nestedFolderPath = folderPath + baseName.replace(/\.zip$/i, '') + '/';
           setStatus('📦 중첩 압축파일 "' + nestedFolderPath + '" 압축 해제 중...', false);
-          const nestedExtracted = await extractSupportedFilesFromZip(nestedFile, nestedFolderPath, depth + 1);
+          const nestedExtracted = await extractSupportedFilesFromZip(nestedFile, nestedFolderPath, depth + 1, errorsCollector);
           extracted.push(...nestedExtracted);
         } catch (nestedErr) {
           console.error(LOG_PREFIX, '중첩 zip 처리 오류:', entry.name, nestedErr);
+          errorsCollector.push('"' + folderPath + entry.name + '": ' + (nestedErr && nestedErr.message ? nestedErr.message : String(nestedErr)));
           setStatus('❌ 중첩 압축파일 "' + entry.name + '" 처리 중 오류: ' + nestedErr.message, true);
         }
         continue;
@@ -1453,6 +1399,7 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
       const file = new File([blob], displayName, { type: extToMime(ext) });
       extracted.push(file);
     }
+    extracted.__zipErrors = errorsCollector; // 최상위 호출자가 꺼내 쓸 수 있도록 부착
     return extracted;
   }
 
@@ -1495,6 +1442,12 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
           continue;
         }
         setStatus('✅ "' + zipFile.name + '"에서 ' + extracted.length + '개 파일을 불러왔습니다.', false);
+
+        // 중첩 zip 처리 중 오류가 하나라도 있었으면, 상태 문구가 곧 다른 메시지로
+        // 덮여서 놓치지 않도록 alert로 확실하게 보여준다.
+        if (extracted.__zipErrors && extracted.__zipErrors.length > 0) {
+          alert('일부 중첩 압축파일 처리 중 오류가 발생해 건너뛰었습니다:\n\n' + extracted.__zipErrors.join('\n'));
+        }
       } catch (err) {
         console.error(LOG_PREFIX, 'ZIP 처리 중 오류:', err);
         setStatus('❌ "' + zipFile.name + '" 압축 해제 중 오류: ' + err.message, true);
