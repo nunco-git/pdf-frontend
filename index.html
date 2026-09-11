@@ -259,8 +259,16 @@
       max-height: 90vh;
       overflow: auto;
       padding: 10px;
+      position: relative;
     }
     .file-list-container:hover { border-color: #93c5fd; box-shadow: 0 6px 16px rgba(37,99,235,0.1); }
+    #selectionMarquee {
+      position: absolute;
+      border: 1px dashed #2563eb;
+      background: rgba(37,99,235,0.12);
+      pointer-events: none;
+      z-index: 50;
+    }
 
     .file-item {
       display: flex;
@@ -278,6 +286,7 @@
     .file-item:hover { border-color: #93c5fd; }
     .file-item.selected { border: 2px solid #2563eb; background-color: #f0f9ff; }
     .file-item.dragging { opacity: 0.4; }
+    .file-item.multi-picked { outline: 2px solid #f59e0b; outline-offset: -1px; background-color: #fffbeb; }
 
     .file-main-row { display: flex; align-items: center; justify-content: space-between; }
     .file-info {
@@ -394,16 +403,17 @@
     .pdf-page-wrap {
       position: relative;
       width: 100%;
+      height: auto !important; /* JS가 계산해 넣는 인라인 height를 무시하고, 캔버스 실제 높이에 맞춰 자동으로 늘어나게 함 */
       background: #fff;
       border-radius: 4px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      overflow: visible; /* 세로로 긴 페이지가 위아래로 잘리지 않도록 */
       flex-shrink: 0;
     }
-    .pdf-page-canvas { width: 100%; height: 100%; display: block; }
+    .pdf-page-canvas { width: 100%; height: auto; display: block; } /* 원본 페이지 세로:가로 비율 그대로 유지 */
     .pdf-page-label {
       position: absolute;
       top: 6px; right: 8px;
@@ -1134,6 +1144,202 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
     });
   } else {
     console.error(LOG_PREFIX, 'fileListItems 요소를 찾지 못해 더블클릭 열기를 등록하지 못했습니다.');
+  }
+
+  // ============================================================
+  // 목록의 파일을 끌어서(드래그) 바탕화면이나 탐색기 폴더 등 "브라우저 밖"으로
+  // 바로 복사해서 놓을 수 있게 한다 (Chrome/Edge 지원, Firefox/Safari 미지원).
+  // - 목록 내부에서의 순서 변경(드래그 정렬)과는 별개로 동작하며 서로 방해하지 않는다.
+  // - 렌더링될 때마다 항목이 새로 만들어지므로, MutationObserver로 매번
+  //   draggable 속성을 다시 보장해준다.
+  // ============================================================
+  const dragOutListEl = document.getElementById('fileListItems');
+  // ============================================================
+  // 목록에서 여러 파일을 한꺼번에 선택하는 기능 (다중 선택)
+  // - Ctrl(맥은 Cmd)+클릭: 항목을 다중 선택에 추가/제거
+  // - Shift+클릭: 마지막으로 클릭한 항목부터 지금 항목까지 범위 선택
+  // - 아무 키 없이 그냥 클릭: 다중 선택 해제(기존 미리보기 클릭 동작은 그대로 유지됨)
+  // - 다중 선택된 상태에서 그 중 하나를 드래그해서 내보내면, 선택된 파일 전부가
+  //   한꺼번에 바탕화면/폴더로 복사된다.
+  // ============================================================
+  let multiSelectedIndices = new Set();
+  let multiSelectAnchorIndex = null;
+
+  function getItemIndexFromEvent(e, containerEl) {
+    let itemEl = e.target;
+    while (itemEl && itemEl.parentElement !== containerEl) itemEl = itemEl.parentElement;
+    if (!itemEl || itemEl.parentElement !== containerEl) return -1;
+    if (itemEl.classList && itemEl.classList.contains('empty-msg')) return -1;
+    return Array.prototype.indexOf.call(containerEl.children, itemEl);
+  }
+
+  function applyMultiSelectHighlight() {
+    if (!dragOutListEl) return;
+    Array.prototype.forEach.call(dragOutListEl.children, (child, idx) => {
+      child.classList.toggle('multi-picked', multiSelectedIndices.has(idx));
+    });
+  }
+
+  if (dragOutListEl) {
+    function ensureItemsDraggable() {
+      Array.prototype.forEach.call(dragOutListEl.children, (child) => {
+        if (child.classList && !child.classList.contains('empty-msg')) {
+          child.setAttribute('draggable', 'true');
+        }
+      });
+    }
+    ensureItemsDraggable();
+    new MutationObserver(() => { ensureItemsDraggable(); applyMultiSelectHighlight(); }).observe(dragOutListEl, { childList: true });
+
+    dragOutListEl.addEventListener('click', (e) => {
+      if (e.target.closest('input, select, button')) return; // 옵션 입력/삭제 버튼 클릭은 다중선택과 무관하게 둠
+      const index = getItemIndexFromEvent(e, dragOutListEl);
+      if (index < 0) return;
+
+      if (e.ctrlKey || e.metaKey) {
+        if (multiSelectedIndices.has(index)) multiSelectedIndices.delete(index);
+        else multiSelectedIndices.add(index);
+        multiSelectAnchorIndex = index;
+      } else if (e.shiftKey && multiSelectAnchorIndex !== null) {
+        const start = Math.min(multiSelectAnchorIndex, index);
+        const end = Math.max(multiSelectAnchorIndex, index);
+        multiSelectedIndices = new Set();
+        for (let i = start; i <= end; i++) multiSelectedIndices.add(i);
+      } else {
+        // 일반 클릭: 다중 선택은 해제하고, 기존의 단일 파일 미리보기 클릭 동작은 그대로 실행됨
+        multiSelectedIndices = new Set();
+        multiSelectAnchorIndex = index;
+      }
+      applyMultiSelectHighlight();
+    });
+
+    dragOutListEl.addEventListener('dragstart', (e) => {
+      const index = getItemIndexFromEvent(e, dragOutListEl);
+      if (index < 0 || typeof fileList === 'undefined' || !fileList[index]) return;
+
+      // 드래그를 시작한 항목이 이미 다중 선택되어 있으면 선택된 파일 전부를,
+      // 아니면 지금 드래그한 파일 하나만 내보낸다.
+      const indicesToExport = (multiSelectedIndices.has(index) && multiSelectedIndices.size > 1)
+        ? Array.from(multiSelectedIndices).sort((a, b) => a - b)
+        : [index];
+
+      try {
+        const lines = [];
+        const urlsToRevoke = [];
+        indicesToExport.forEach((i) => {
+          const f = fileList[i] && fileList[i].file;
+          if (!f) return;
+          const url = URL.createObjectURL(f);
+          urlsToRevoke.push(url);
+          const mime = f.type || 'application/octet-stream';
+          lines.push(mime + ':' + encodeURIComponent(f.name) + ':' + url);
+        });
+        if (lines.length === 0) return;
+        e.dataTransfer.setData('DownloadURL', lines.join('\n'));
+        e.dataTransfer.effectAllowed = 'copy';
+        // 드래그가 끝나고 실제 저장이 이뤄질 시간을 준 뒤 메모리 해제
+        setTimeout(() => urlsToRevoke.forEach((u) => URL.revokeObjectURL(u)), 60000);
+      } catch (err) {
+        console.error(LOG_PREFIX, '드래그로 파일 내보내기 준비 중 오류:', err);
+      }
+    });
+  } else {
+    console.error(LOG_PREFIX, 'fileListItems 요소를 찾지 못해 드래그 내보내기/다중 선택을 등록하지 못했습니다.');
+  }
+
+  // ============================================================
+  // 마우스로 범위를 끌어서(드래그) 여러 파일을 한꺼번에 선택하는 기능
+  // - 파일이 없는 빈 공간에서 마우스를 누른 채로 끌면 사각형(마키)이 생기고,
+  //   그 사각형에 걸치는 파일들이 자동으로 다중 선택된다.
+  // - 파일 항목 위에서 바로 누르고 끄는 동작은 기존처럼 "밖으로 드래그해서
+  //   내보내기/순서 변경"으로 동작해야 하므로, 마키 선택은 빈 공간에서
+  //   시작했을 때만 작동한다.
+  // - Shift 또는 Ctrl(Cmd)을 누른 채로 시작하면 기존 선택에 추가되고,
+  //   그냥 시작하면 새로 선택한다.
+  // ============================================================
+  const fileListContainerEl = document.getElementById('fileListContainer');
+  if (fileListContainerEl && dragOutListEl) {
+    let marqueeEl = null;
+    let marqueeStartX = 0;
+    let marqueeStartY = 0;
+    let marqueeAdditive = false;
+    let baseSelectionForMarquee = new Set();
+
+    function createMarqueeEl() {
+      const el = document.createElement('div');
+      el.id = 'selectionMarquee';
+      fileListContainerEl.appendChild(el);
+      return el;
+    }
+
+    function updateMarqueeRectAndSelection(currentX, currentY) {
+      const left = Math.min(marqueeStartX, currentX);
+      const top = Math.min(marqueeStartY, currentY);
+      const width = Math.abs(currentX - marqueeStartX);
+      const height = Math.abs(currentY - marqueeStartY);
+      marqueeEl.style.left = left + 'px';
+      marqueeEl.style.top = top + 'px';
+      marqueeEl.style.width = width + 'px';
+      marqueeEl.style.height = height + 'px';
+
+      // 마키 사각형(스크롤 좌표 기준)과 각 파일 항목의 위치를 비교해 겹치는지 확인
+      const marqueeRight = left + width;
+      const marqueeBottom = top + height;
+      const nextSelection = new Set(baseSelectionForMarquee);
+      Array.prototype.forEach.call(dragOutListEl.children, (child, idx) => {
+        if (child.classList && child.classList.contains('empty-msg')) return;
+        const itemTop = child.offsetTop;
+        const itemLeft = child.offsetLeft;
+        const itemBottom = itemTop + child.offsetHeight;
+        const itemRight = itemLeft + child.offsetWidth;
+        const overlaps = itemLeft < marqueeRight && itemRight > left && itemTop < marqueeBottom && itemBottom > top;
+        if (overlaps) nextSelection.add(idx);
+      });
+      multiSelectedIndices = nextSelection;
+      applyMultiSelectHighlight();
+    }
+
+    function onMarqueeMouseMove(e) {
+      if (!marqueeEl) return;
+      const rect = fileListContainerEl.getBoundingClientRect();
+      const currentX = e.clientX - rect.left + fileListContainerEl.scrollLeft;
+      const currentY = e.clientY - rect.top + fileListContainerEl.scrollTop;
+      updateMarqueeRectAndSelection(currentX, currentY);
+    }
+
+    function onMarqueeMouseUp() {
+      if (marqueeEl) {
+        marqueeEl.remove();
+        marqueeEl = null;
+      }
+      document.removeEventListener('mousemove', onMarqueeMouseMove);
+      document.removeEventListener('mouseup', onMarqueeMouseUp);
+    }
+
+    fileListContainerEl.addEventListener('mousedown', (e) => {
+      // 파일 항목이나 그 안의 버튼/입력 위에서 누른 경우는 마키 선택을 시작하지 않음
+      // (기존의 항목 클릭·드래그·옵션 조작 동작을 그대로 유지하기 위함)
+      if (e.target.closest('.file-item')) return;
+      if (e.button !== 0) return; // 왼쪽 버튼만
+      e.preventDefault();
+
+      const rect = fileListContainerEl.getBoundingClientRect();
+      marqueeStartX = e.clientX - rect.left + fileListContainerEl.scrollLeft;
+      marqueeStartY = e.clientY - rect.top + fileListContainerEl.scrollTop;
+      marqueeAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
+      baseSelectionForMarquee = marqueeAdditive ? new Set(multiSelectedIndices) : new Set();
+      if (!marqueeAdditive) {
+        multiSelectedIndices = new Set();
+        applyMultiSelectHighlight();
+      }
+      marqueeEl = createMarqueeEl();
+      updateMarqueeRectAndSelection(marqueeStartX, marqueeStartY);
+
+      document.addEventListener('mousemove', onMarqueeMouseMove);
+      document.addEventListener('mouseup', onMarqueeMouseUp);
+    });
+  } else {
+    console.error(LOG_PREFIX, 'fileListContainer 요소를 찾지 못해 마우스 범위 선택을 등록하지 못했습니다.');
   }
 
   // ============================================================
