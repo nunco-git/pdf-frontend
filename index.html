@@ -1233,10 +1233,18 @@ function _0x17fb(){const _0x1453ef=['DxrMlte2Bgu','uergrg9JDw1LBNq','yxjYyxLcDwz
           urlsToRevoke.push(url);
           const mime = f.type || 'application/octet-stream';
           lines.push(mime + ':' + encodeURIComponent(f.name) + ':' + url);
+          // 실제 File 객체도 함께 담아서, 윈도우 탐색기뿐 아니라 다른
+          // 웹사이트의 파일 첨부창(드롭존)에도 파일로 인식되게 한다.
+          // (DownloadURL만으로는 OS 파일 관리자만 이해하고, 웹사이트는 인식 못 함)
+          try {
+            e.dataTransfer.items.add(f);
+          } catch (itemErr) {
+            console.error(LOG_PREFIX, '실제 파일 데이터 첨부 중 오류(DownloadURL 방식은 계속 시도됨):', itemErr);
+          }
         });
         if (lines.length === 0) return;
         e.dataTransfer.setData('DownloadURL', lines.join('\n'));
-        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.effectAllowed = 'copyMove';
         // 드래그가 끝나고 실제 저장이 이뤄질 시간을 준 뒤 메모리 해제
         setTimeout(() => urlsToRevoke.forEach((u) => URL.revokeObjectURL(u)), 60000);
       } catch (err) {
