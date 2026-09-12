@@ -48,6 +48,13 @@
           showError('스크립트를 불러오지 못했습니다: ' + (target.src || '(알 수 없음)'));
           return;
         }
+        // 브라우저는 교차 출처 스크립트의 내부 오류를 보안상 일부러 숨겨서
+        // "Script error."처럼 메시지·파일명·줄번호가 전부 빈 채로 알려준다.
+        // 이런 경우는 알맹이가 없어 혼란만 주므로 배너로 띄우지 않고 콘솔에만 남긴다.
+        if (!e.message && !e.filename && !e.lineno) {
+          console.warn('(정보 없는 교차 출처 오류로 배너 표시 생략)', e);
+          return;
+        }
         showError((e.message || '알 수 없는 오류') + '  [' + (e.filename || '') + ':' + (e.lineno || '') + ']');
       }, true); // true = 캡처 단계 → 스크립트 로딩 실패(버블링 안 됨)까지 잡기 위함
       window.addEventListener('unhandledrejection', function (e) {
@@ -676,7 +683,7 @@
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
               <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX파일 미리보기만 가능)</span></span></li>
-              <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 압축해제</strong> <span class="feat-desc">: zip파일, 이중 zip 파일 모두 즉시 미리보기 및 폴더에 일괄 압축해제 가능</span></span></li>
+              <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 미리보기</strong> <span class="feat-desc">: 압축파일(ZIP파일)도 미리보기 가능</span></span></li>
             </ul>
           </div>
         </div>
