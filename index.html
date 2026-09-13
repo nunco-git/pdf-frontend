@@ -88,7 +88,12 @@
   </script>
   <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+  <!-- [보안 수정] xlsx@0.18.5(npm판)에는 알려진 취약점(CVE-2023-30533 프로토타입 오염,
+       CVE-2024-22363 ReDoS)이 있고, npm에는 고쳐진 버전이 올라오지 않는다 (SheetJS가
+       2023년부터 자체 CDN에서만 배포). 그래서 SRI 대신 self-host 방식으로 바꾼다:
+       cdn.sheetjs.com에서 받은 고쳐진 버전(0.20.3)을 이 저장소의 vendor/xlsx/ 폴더에
+       넣어 직접 서빙한다. -->
+  <script src="./vendor/xlsx/xlsx.full.min.js"></script>
 
   <style>
     * { box-sizing: border-box; }
