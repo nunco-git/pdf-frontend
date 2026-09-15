@@ -708,6 +708,104 @@
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
       .modal-content { padding: 18px; }
     }
+  /* ── 건의/개선사항 보내기 모달 ── */
+  .feedback-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.55);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .feedback-overlay.open { display: flex; }
+  .feedback-box {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px 26px 22px;
+    box-shadow: 0 20px 60px rgba(15,23,42,0.35);
+    position: relative;
+    font-family: 'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;
+  }
+  .feedback-box h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .feedback-box .feedback-sub {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    color: #64748b;
+  }
+  .feedback-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .feedback-close:hover { color: #334155; background: #f1f5f9; }
+  .feedback-field { margin-bottom: 14px; }
+  .feedback-field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 5px;
+  }
+  .feedback-field input,
+  .feedback-field select,
+  .feedback-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: #0f172a;
+    background: #f8fafc;
+  }
+  .feedback-field input:focus,
+  .feedback-field select:focus,
+  .feedback-field textarea:focus {
+    outline: none;
+    border-color: #7dd3fc;
+    background: #fff;
+  }
+  .feedback-field textarea { min-height: 110px; resize: vertical; }
+  .feedback-submit {
+    width: 100%;
+    background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+    color: #0f172a;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .feedback-submit:disabled { opacity: 0.6; cursor: default; }
+  .feedback-status {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    text-align: center;
+    min-height: 16px;
+  }
+  .feedback-status.success { color: #15803d; }
+  .feedback-status.error { color: #b91c1c; }
   </style>
 </head>
 <body>
@@ -805,6 +903,8 @@
           <a href="https://mail.google.com/mail/?view=cm&fs=1&to=smartgongmaster@gmail.com" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">smartgongmaster@gmail.com</a>
           <span style="color:#cbd5e1;">|</span>
           <span style="color:#64748b;">Copyright &copy; 2026 SmartGong. All Rights Reserved.</span>
+          <span style="color:#cbd5e1;">|</span>
+          <a href="#" onclick="openFeedback(); return false;" style="color:#7dd3fc; text-decoration:none; font-weight:700;">💬 건의사항</a>
         </div>
       </footer>
     </div>
@@ -2698,6 +2798,92 @@ async function mergeFilesCompressed() {
       }
     }, 1500);
   });
+</script>
+
+<div class="feedback-overlay" id="feedbackModal">
+  <div class="feedback-box">
+    <button class="feedback-close" onclick="closeFeedback()" aria-label="닫기">✕</button>
+    <h2>💬 건의 · 개선사항 보내기</h2>
+    <p class="feedback-sub">보내주신 내용은 관리자 이메일로 바로 전달됩니다.</p>
+    <form id="feedbackForm" action="https://formspree.io/smartgongmaster@gmail.com" method="POST" onsubmit="submitFeedback(event)">
+      <input type="hidden" name="_subject" value="[스마트공] 건의사항이 도착했습니다">
+      <input type="text" name="_gotcha" style="display:none">
+      <div class="feedback-field">
+        <label for="fb-name">이름 (선택)</label>
+        <input type="text" id="fb-name" name="이름" placeholder="홍길동">
+      </div>
+      <div class="feedback-field">
+        <label for="fb-email">회신 받으실 이메일 (선택)</label>
+        <input type="email" id="fb-email" name="email" placeholder="answer@example.com">
+      </div>
+      <div class="feedback-field">
+        <label for="fb-type">구분</label>
+        <select id="fb-type" name="구분">
+          <option>개선 제안</option>
+          <option>오류/버그 신고</option>
+          <option>새 앱 추가 요청</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="feedback-field">
+        <label for="fb-content">내용 <span style="color:#dc2626;">*</span></label>
+        <textarea id="fb-content" name="내용" required placeholder="불편했던 점이나 추가되었으면 하는 기능을 자유롭게 적어주세요."></textarea>
+      </div>
+      <button type="submit" class="feedback-submit">보내기</button>
+      <p class="feedback-status" id="feedbackStatus"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ── 건의/개선사항 보내기 (Formspree 연동) ──
+  function openFeedback() {
+    const status = document.getElementById('feedbackStatus');
+    status.textContent = '';
+    status.className = 'feedback-status';
+    document.getElementById('feedbackModal').classList.add('open');
+  }
+  function closeFeedback() {
+    document.getElementById('feedbackModal').classList.remove('open');
+  }
+  document.getElementById('feedbackModal').addEventListener('click', (e) => {
+    if (e.target.id === 'feedbackModal') closeFeedback();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeFeedback();
+  });
+
+  async function submitFeedback(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('.feedback-submit');
+    const status = document.getElementById('feedbackStatus');
+    btn.disabled = true;
+    btn.textContent = '보내는 중...';
+    status.textContent = '';
+    status.className = 'feedback-status';
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        status.textContent = '소중한 의견 감사합니다! 관리자에게 전달되었습니다.';
+        status.className = 'feedback-status success';
+        form.reset();
+        setTimeout(closeFeedback, 1800);
+      } else {
+        throw new Error('전송 실패');
+      }
+    } catch (err) {
+      status.textContent = '전송에 실패했습니다. smartgongmaster@gmail.com 으로 직접 메일 부탁드립니다.';
+      status.className = 'feedback-status error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '보내기';
+    }
+  }
 </script>
 </body>
 </html>
