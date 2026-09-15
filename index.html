@@ -461,20 +461,9 @@
       position: relative;
       transition: transform 0.15s ease;
     }
-    /* flex align-items:center인 상태에서는 자식의 height:100%가 제대로 적용되지
-       않아(가로만 맞고 세로는 원본 비율대로 넘쳐서 잘리는 문제가 있었음),
-       단일 이미지 미리보기(#previewElement)는 위치를 꽉 채우는 절대 위치
-       지정 방식을 쓴다. (PDF 페이지 캔버스는 .pdf-page-canvas 규칙을 따로 써서
-       이 규칙의 영향을 받지 않음) */
-    #previewElement {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      transition: transform 0.3s ease;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
+    /* 단일 이미지 미리보기도 PDF 페이지와 같은 wrap 구조(.pdf-page-wrap 안의
+       .pdf-page-canvas)를 재사용하므로, 이미지 전용 위치 지정 규칙은 더 이상
+       필요 없다 (가로맞춤/세로맞춤이 PDF와 동일하게 적용됨). */
     .preview-placeholder { font-size: 13px; color: #94a3b8; text-align: center; line-height: 1.4; }
 
     /* PDF 다중 페이지 스크롤 미리보기 */
@@ -503,7 +492,7 @@
       overflow: visible; /* 세로로 긴 페이지가 위아래로 잘리지 않도록 */
       flex-shrink: 0;
     }
-    .pdf-page-canvas { width: 100%; height: auto; display: block; } /* 원본 페이지 세로:가로 비율 그대로 유지 */
+    .pdf-page-canvas { width: 100%; height: auto; display: block; transition: transform 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.15); } /* 원본 페이지 세로:가로 비율 그대로 유지 */
     .pdf-page-label {
       position: absolute;
       top: 6px; right: 8px;
@@ -771,24 +760,6 @@
         </div>
       </div>
       <div id="status"></div>
-
-      <footer style="width:100%; margin-top:24px; padding-top:20px; border-top:1px solid #e2e8f0; font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;">
-        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; font-size:15px; color:#94a3b8;">
-          <a href="https://smartgong.kr/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; color:#0f172a; text-decoration:none; font-weight:800; font-size:16px;">
-            <img src="smartgong_logo_icon.png" alt="스마트공" style="height:34px; width:auto;">
-            <span>스마트공</span>
-            <span style="color:#94a3b8; font-weight:600; font-size:15px;">smartgong.kr</span>
-          </a>
-          <span style="color:#cbd5e1;">|</span>
-          <a href="privacy.html" style="color:#64748b; text-decoration:none;">개인정보처리방침</a>
-          <span style="color:#cbd5e1;">|</span>
-          <a href="copyright.html" style="color:#64748b; text-decoration:none;">저작권정책</a>
-          <span style="color:#cbd5e1;">|</span>
-          <a href="https://mail.google.com/mail/?view=cm&fs=1&to=smartgongmaster@gmail.com" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">smartgongmaster@gmail.com</a>
-          <span style="color:#cbd5e1;">|</span>
-          <span style="color:#64748b;">Copyright &copy; 2026 SmartGong. All Rights Reserved.</span>
-        </div>
-      </footer>
     </div>
   </div>
 
@@ -1069,9 +1040,37 @@ async function showPreview(itemData) {
     reader.onload = (e) => {
       const img = document.createElement('img');
       img.id = 'previewElement';
+      img.className = 'pdf-page-canvas';
       img.src = e.target.result;
-      img.style.transform = `rotate(${itemData.rotation}deg)`;
-      previewBox.appendChild(img);
+
+      // PDF 미리보기와 똑같은 구조(스크롤 영역 안에 비율이 고정된 wrap)를 재사용해서,
+      // 가로맞춤/세로맞춤 버튼이 이미지에도 PDF와 동일하게 적용되도록 한다.
+      // (기존에는 object-fit:contain으로 항상 "안 넘치게"만 자동으로 맞춰져서,
+      //  두 버튼을 눌러도 아무 차이가 없었다.)
+      const wrap = document.createElement('div');
+      wrap.className = 'pdf-page-wrap';
+      wrap.appendChild(img);
+
+      const scrollWrap = document.createElement('div');
+      scrollWrap.className = 'pdf-scroll-wrap';
+      scrollWrap.appendChild(wrap);
+
+      previewBox.classList.add('pdf-scroll-mode');
+      if (previewFitMode === 'height') previewBox.classList.add('fit-height');
+      else previewBox.classList.remove('fit-height');
+      previewBox.appendChild(scrollWrap);
+
+      img.onload = () => {
+        const swap = (itemData.rotation === 90 || itemData.rotation === 270);
+        const effW = swap ? img.naturalHeight : img.naturalWidth;
+        const effH = swap ? img.naturalWidth : img.naturalHeight;
+        wrap.style.aspectRatio = `${effW} / ${effH}`;
+        if (previewFitMode === 'height') {
+          const fitHeightPx = Math.max(previewBox.clientHeight - 20, 300);
+          wrap.style.setProperty('height', `${fitHeightPx}px`, 'important');
+        }
+        if (itemData.rotation) img.style.transform = `rotate(${itemData.rotation}deg)`;
+      };
     };
     reader.readAsDataURL(file);
   } else if (file.type === 'application/pdf') {
@@ -1527,7 +1526,23 @@ async function renderPdfPage(pdf, wrap, itemData) {
 function applyPreviewRotation(deg) {
   const el = document.getElementById('previewElement');
   if (el) {
-    el.style.transform = `rotate(${deg}deg)`;
+    el.style.transform = deg ? `rotate(${deg}deg)` : '';
+    // 회전에 따라 가로/세로가 뒤바뀔 수 있으므로, 담고 있는 wrap의 비율도 다시 계산한다
+    // (그래야 가로맞춤/세로맞춤이 회전 후에도 정확하게 맞는다).
+    const wrap = el.closest('.pdf-page-wrap');
+    const previewBox = document.getElementById('previewBox');
+    if (wrap && el.naturalWidth) {
+      const swap = (deg === 90 || deg === 270);
+      const effW = swap ? el.naturalHeight : el.naturalWidth;
+      const effH = swap ? el.naturalWidth : el.naturalHeight;
+      wrap.style.aspectRatio = `${effW} / ${effH}`;
+      if (previewFitMode === 'height' && previewBox) {
+        const fitHeightPx = Math.max(previewBox.clientHeight - 20, 300);
+        wrap.style.setProperty('height', `${fitHeightPx}px`, 'important');
+      } else {
+        wrap.style.removeProperty('height');
+      }
+    }
     return;
   }
   // PDF 다중 페이지 미리보기: 이미 렌더링된 모든 페이지 캔버스에 즉시 회전 적용
