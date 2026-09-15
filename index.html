@@ -475,6 +475,22 @@
       transition: transform 0.3s ease;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
+    /* 이미지 가로 맞춤 모드: PDF의 가로 맞춤과 동일하게 박스 너비에 꽉 채우고
+       세로로 넘치는 부분은 스크롤로 본다(= 확대되어 커 보이는 효과). */
+    .preview-box.image-fit-width {
+      display: block;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0;
+    }
+    .preview-box.image-fit-width #previewElement {
+      position: static;
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      object-fit: initial;
+    }
     .preview-placeholder { font-size: 13px; color: #94a3b8; text-align: center; line-height: 1.4; }
 
     /* PDF 다중 페이지 스크롤 미리보기 */
@@ -1033,7 +1049,7 @@ function removeItem(index, e) {
 async function showPreview(itemData) {
   const previewBox = document.getElementById('previewBox');
   previewBox.innerHTML = '';
-  previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
+  previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode', 'image-fit-width');
 
   if (!itemData) {
     previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>';
@@ -1065,6 +1081,11 @@ async function showPreview(itemData) {
   const kind = itemData.kind || getFileKind(file);
 
   if (kind === 'image') {
+    // PDF와 동일하게 가로 맞춤(width)/세로 맞춤(height) 모드를 이미지에도 적용한다.
+    // - 세로 맞춤(기본값): 이미지 전체가 미리보기 박스 안에 다 보이도록 축소(object-fit: contain).
+    // - 가로 맞춤: 박스 너비에 꽉 채우고, 세로로 넘치는 부분은 스크롤해서 보게 한다
+    //   (PDF의 가로 맞춤이 확대되어 커 보이는 것과 같은 효과).
+    previewBox.classList.toggle('image-fit-width', previewFitMode === 'width');
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = document.createElement('img');
