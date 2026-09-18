@@ -730,7 +730,7 @@
             </div>
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX파일 미리보기만 가능)</span></span></li>
+              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX, 엑셀파일 미리보기만 가능)</span></span></li>
               <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 미리보기</strong> <span class="feat-desc">: 압축파일(ZIP파일)도 미리보기 가능</span></span></li>
             </ul>
           </div>
@@ -740,6 +740,7 @@
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <span class="drop-icon">📂</span>
             <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
+            <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX, 엑셀파일은 미리보기만 가능)</span>
             <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
