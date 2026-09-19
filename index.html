@@ -2229,6 +2229,10 @@ async function mergeFilesCompressed() {
     const kind = itemData.kind || (typeof getFileKind === 'function' ? getFileKind(itemData.file) : null);
     openFileForDoubleClick(itemData.file, kind);
   }
+  // 목록 항목의 onclick="openOriginalFile(...)"는 HTML 인라인 속성이라 전역
+  // (window) 스코프에서 실행된다. 이 함수는 IIFE 안에 선언되어 있어서 그냥
+  // 두면 "openOriginalFile is not defined" 오류가 나므로 명시적으로 노출한다.
+  window.openOriginalFile = openOriginalFile;
 
   const dblClickListEl = document.getElementById('fileListItems');
   if (dblClickListEl) {
