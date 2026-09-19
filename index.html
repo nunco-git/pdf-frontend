@@ -1073,8 +1073,11 @@ async function showPreview(itemData) {
   if (!previewPanelHeightInitialized) {
     const previewPanelEl = previewBox.closest('.preview-panel');
     if (previewPanelEl) {
-      const panelTop = previewPanelEl.getBoundingClientRect().top;
-      const stableHeight = Math.max(window.innerHeight - panelTop - 20, 320);
+      // 모니터(뷰포트) 세로 높이의 약 70%를 미리보기 패널 높이로 사용한다.
+      // 화면이 작아서 70%가 패널 위치 기준 남은 공간보다 크더라도, 사용자가
+      // 요청한 대로 넉넉하게 키워준다(페이지 자체는 필요하면 스크롤됨).
+      // 다만 화면이 아주 작은 경우를 대비해 최소 320px은 보장한다.
+      const stableHeight = Math.max(window.innerHeight * 0.7, 320);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
