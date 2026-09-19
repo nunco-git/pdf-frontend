@@ -394,6 +394,8 @@
     .btn-group { display: flex; gap: 4px; }
     .btn-sm { border: 1px solid #cbd5e1; background: white; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .btn-del { color: #ef4444; border-color: #fca5a5; }
+    .btn-open { color: #ea580c; border-color: #fdba74; font-size: 11px; padding: 2px 7px; white-space: nowrap; }
+    .btn-open:hover { background: #fff7ed; }
 
     .preview-panel {
       flex: 1 1 0%;
@@ -997,6 +999,7 @@ function renderFileList() {
               <span title="${__escFileName(file.name)}">${__escFileName(file.name)}</span>
             </div>
             <div class="btn-group">
+              <button class="btn-sm btn-open" title="${kind === 'hwpx' ? '원본 파일을 다운로드해서 한글(HWP)에서 열기' : (kind === 'excel' ? '원본 파일을 다운로드해서 엑셀에서 열기' : '원본 파일을 새 탭에서 열기')}" onclick="openOriginalFile(${index}, event)">${kind === 'hwpx' ? '📥 한글로 열기' : (kind === 'excel' ? '📥 엑셀로 열기' : '🔎 실행')}</button>
               <button class="btn-sm btn-del" onclick="removeItem(${index}, event)">✕</button>
             </div>
           </div>
@@ -2025,13 +2028,53 @@ async function mergeFilesCompressed() {
     console.error(EXCEL_LOG_PREFIX, 'getFileKind 함수를 찾지 못해 엑셀 인식을 추가하지 못했습니다.');
   }
 
-  async function showExcelPreview(file, box) {
+  // 비밀번호로 보호된 엑셀 파일: XLSX.read()가 실패했을 때, 실패 이유가
+  // "암호 보호"로 보이면 비밀번호 입력창을 보여주고, 입력받은 비밀번호로
+  // 다시 시도한다(모두 브라우저 안에서만 처리되고 서버로는 전송되지 않음).
+  function looksLikeEncryptedExcelError(err) {
+    const msg = ((err && err.message) || '').toLowerCase();
+    return /password|protect|encrypt|암호|보호/.test(msg);
+  }
+
+  function showExcelPasswordPrompt(file, box, errorText) {
+    box.classList.add('excel-mode');
+    box.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-placeholder excel-password-prompt';
+    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px;';
+    wrap.innerHTML = `
+      <div>🔒 비밀번호로 보호된 엑셀 파일입니다.<br>암호를 입력하면 브라우저 안에서 바로 풀어서 미리 볼 수 있습니다.</div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="password" class="excel-pw-input" placeholder="비밀번호 입력" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+        <button type="button" class="excel-pw-submit-btn" style="padding:6px 14px; border:none; border-radius:6px; background:#ea580c; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">확인</button>
+      </div>
+      <div class="excel-pw-error" style="color:#dc2626; font-size:12px; min-height:16px;"></div>
+    `;
+    box.appendChild(wrap);
+    const input = wrap.querySelector('.excel-pw-input');
+    const submitBtn = wrap.querySelector('.excel-pw-submit-btn');
+    const errorEl = wrap.querySelector('.excel-pw-error');
+    if (errorText) errorEl.textContent = errorText;
+    input.focus();
+
+    function submit() {
+      const pw = input.value;
+      if (!pw) { errorEl.textContent = '비밀번호를 입력해 주세요.'; return; }
+      showExcelPreview(file, box, pw);
+    }
+    submitBtn.onclick = submit;
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  }
+
+  async function showExcelPreview(file, box, passwordOverride) {
     box.classList.add('excel-mode');
     box.innerHTML = '<div class="preview-placeholder">엑셀 파일을 불러오는 중...</div>';
     try {
       if (typeof XLSX === 'undefined') throw new Error('엑셀 미리보기 라이브러리를 불러오지 못했습니다.');
       const buf = await file.arrayBuffer();
-      const workbook = XLSX.read(buf, { type: 'array' });
+      const readOpts = { type: 'array' };
+      if (passwordOverride) readOpts.password = passwordOverride;
+      const workbook = XLSX.read(buf, readOpts);
       const sheetNames = workbook.SheetNames;
       if (!sheetNames || sheetNames.length === 0) throw new Error('시트를 찾을 수 없습니다.');
 
@@ -2075,7 +2118,16 @@ async function mergeFilesCompressed() {
       box.appendChild(wrap);
     } catch (err) {
       console.error(EXCEL_LOG_PREFIX, '엑셀 미리보기 오류:', err);
-      box.innerHTML = '<div class="preview-placeholder">엑셀 파일을 미리 볼 수 없습니다.<br>' + (err && err.message ? err.message : '') + '</div>';
+      if (looksLikeEncryptedExcelError(err)) {
+        showExcelPasswordPrompt(file, box, passwordOverride ? '비밀번호가 올바르지 않습니다. 다시 입력해 주세요.' : '');
+        return;
+      }
+      // 정확한 오류 메시지로는 "암호 보호"인지 구분이 안 되지만, 사용자가 직접
+      // 비밀번호를 입력해 볼 수 있도록 시도 버튼을 함께 보여준다.
+      box.innerHTML = '<div class="preview-placeholder">엑셀 파일을 미리 볼 수 없습니다.<br>' + (err && err.message ? err.message : '') +
+        '<br><button type="button" class="excel-try-pw-btn" style="margin-top:10px; padding:6px 14px; border:none; border-radius:6px; background:#ea580c; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">비밀번호 입력해서 다시 시도</button></div>';
+      const tryBtn = box.querySelector('.excel-try-pw-btn');
+      if (tryBtn) tryBtn.onclick = () => showExcelPasswordPrompt(file, box);
     }
   }
 
@@ -2137,13 +2189,45 @@ async function mergeFilesCompressed() {
   // 그 외 형식(HWPX 등 브라우저가 못 여는 형식)은 다운로드를 일으켜서
   // 사용자가 받은 파일을 자신의 기본 프로그램으로 직접 열 수 있게 한다.
   // ============================================================
-  function openFileForDoubleClick(file) {
+  // 웹앱은 브라우저 안에서만 동작하기 때문에, 보안상 자바스크립트로 사용자 PC의
+  // "한글" 같은 외부 프로그램을 직접 실행시킬 수는 없다(모든 브라우저 공통 제한).
+  // 대신 할 수 있는 최선은:
+  //   - PDF/이미지: 브라우저가 자체적으로 렌더링할 수 있으므로 새 탭에 원본 그대로 연다.
+  //   - HWPX/엑셀(xlsx·xls): 브라우저가 화면에 그대로 그릴 수 없으므로, 원본
+  //     파일명 그대로 다운로드한다. 받은 파일을 다운로드 폴더에서 더블클릭하면
+  //     PC에 설치된 한글/엑셀이 자동으로 열어준다(확장자로 연결 프로그램이
+  //     지정되어 있는 한, 이 마지막 더블클릭 한 번만 남는다).
+  function openFileForDoubleClick(file, kind) {
+    const fileKind = kind || (typeof getFileKind === 'function' ? getFileKind(file) : null);
     const url = URL.createObjectURL(file);
+
+    if (fileKind === 'hwpx' || fileKind === 'excel') {
+      const programName = fileKind === 'hwpx' ? '한글(HWP)' : '엑셀';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name || (fileKind === 'hwpx' ? 'document.hwpx' : 'document.xlsx');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setStatus('📥 "' + (file.name || '') + '" 파일을 다운로드했습니다. 다운로드된 파일을 더블클릭하면 ' + programName + '에서 원본 그대로 열립니다.');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return;
+    }
+
     const opened = window.open(url, '_blank');
     if (!opened) {
       setStatus('❌ 새 탭을 열지 못했습니다. 브라우저의 팝업 차단을 해제한 뒤 다시 시도해주세요.', true);
     }
     setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  // 좌측 목록의 "실행 / 한글로 열기" 버튼에서 호출
+  function openOriginalFile(index, event) {
+    if (event) event.stopPropagation();
+    if (typeof fileList === 'undefined' || !fileList[index]) return;
+    const itemData = fileList[index];
+    const kind = itemData.kind || (typeof getFileKind === 'function' ? getFileKind(itemData.file) : null);
+    openFileForDoubleClick(itemData.file, kind);
   }
 
   const dblClickListEl = document.getElementById('fileListItems');
@@ -2161,7 +2245,9 @@ async function mergeFilesCompressed() {
       if (itemEl.classList && itemEl.classList.contains('empty-msg')) return;
       const index = Array.prototype.indexOf.call(dblClickListEl.children, itemEl);
       if (index < 0 || typeof fileList === 'undefined' || !fileList[index]) return;
-      openFileForDoubleClick(fileList[index].file);
+      const itemData = fileList[index];
+      const kind = itemData.kind || (typeof getFileKind === 'function' ? getFileKind(itemData.file) : null);
+      openFileForDoubleClick(itemData.file, kind);
     });
   } else {
     console.error(LOG_PREFIX, 'fileListItems 요소를 찾지 못해 더블클릭 열기를 등록하지 못했습니다.');
