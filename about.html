@@ -135,7 +135,7 @@
     font-size: 15px;
     color: #94a3b8;
   }
-  footer .footer-links a { color: #64748b; text-decoration: none; }
+  footer .footer-links a, footer .footer-links .footer-nav-link { color: #64748b; text-decoration: none; }
   footer .footer-links .brand { color: #0f172a; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-flex; align-items: center; gap: 6px; }
   footer .footer-links .brand img { height: 28px; width: auto; }
 
@@ -148,6 +148,7 @@
 </head>
 <body>
   <div class="page">
+    <a href="index.html" style="display:inline-flex; align-items:center; gap:6px; color:#64748b; text-decoration:none; font-size:14.5px; font-weight:600; margin-bottom:18px;">← 초기화면으로 돌아가기</a>
     <div class="top-title">
       <img src="smartgong_logo_icon.png" alt="스마트공">
       <h1>스마트공 서비스 안내</h1>
@@ -185,16 +186,16 @@
       <h2>제공하는 도구 예시</h2>
       <div class="feature-grid">
         <div class="feature-card">
-          <strong>📄 문서 병합·변환</strong>
-          <span>PDF·이미지·한글(HWPX) 문서를 병합, 변환, 이미지화</span>
+          <strong>📂 공문 일괄 조회</strong>
+          <span>PDF·한글·엑셀·이미지·압축 파일을 한 화면에서 조회 가능</span>
         </div>
         <div class="feature-card">
           <strong>📊 엑셀 자동화</strong>
           <span>자주 쓰는 엑셀 함수 자동 변환, 여러 엑셀 파일 시트 병합</span>
         </div>
         <div class="feature-card">
-          <strong>🗂️ 파일 정리</strong>
-          <span>문서 내용 기반 파일명 일괄 변경, 사진 방향·용량 일괄 조정</span>
+          <strong>📑 보고서·자료 병합</strong>
+          <span>한글파일, 엑셀파일을 간편하게 병합 가능</span>
         </div>
         <div class="feature-card">
           <strong>🔒 개인정보 보호</strong>
@@ -205,8 +206,8 @@
           <span>설문·증빙자료·의무교육 이수결과 등 다수 담당자 자료 취합</span>
         </div>
         <div class="feature-card">
-          <strong>🗓️ 업무 관리</strong>
-          <span>부서별 일정표, 시설별 월간자료 취합 등 관리 웹앱</span>
+          <strong>🗃️ 파일 정리</strong>
+          <span>문서 내용 기반 파일명 일괄 변경, 사진 방향·용량 일괄 조정</span>
         </div>
       </div>
     </section>
@@ -222,30 +223,45 @@
 
     <div class="contact-box">
       개선 의견이나 오류 제보, 필요한 기능 제안은 언제든 환영합니다.<br>
-      <a href="https://mail.google.com/mail/?view=cm&fs=1&to=smartgongmaster@gmail.com" target="_blank" rel="noopener">smartgongmaster@gmail.com</a> 으로 편하게 연락해 주세요.
+      <strong style="color:#c2410c;">smartgongmaster@gmail.com</strong> 으로 편하게 연락해 주세요.
     </div>
 
     <footer>
       <div class="footer-links">
-        <a class="brand" href="https://smartgong.kr/" target="_blank" rel="noopener">
+        <span class="brand footer-nav-link" data-href="https://smartgong.kr/" data-newtab="1" role="link" tabindex="0" style="cursor:pointer;">
           <img src="smartgong_logo_icon.png" alt="스마트공">
           <span>스마트공</span>
           <span style="color:#94a3b8; font-weight:600; font-size:15px;">smartgong.kr</span>
-        </a>
+        </span>
         <span style="color:#cbd5e1;">|</span>
-        <a href="about.html">서비스 안내</a>
+        <span class="footer-nav-link" data-href="about.html" role="link" tabindex="0" style="cursor:pointer;">서비스 안내</span>
         <span style="color:#cbd5e1;">|</span>
-        <a href="services.html">서비스 목록</a>
+        <span class="footer-nav-link" data-href="services.html" role="link" tabindex="0" style="cursor:pointer;">서비스 목록</span>
         <span style="color:#cbd5e1;">|</span>
-        <a href="terms.html">이용약관</a>
+        <span class="footer-nav-link" data-href="terms.html" role="link" tabindex="0" style="cursor:pointer;">이용약관</span>
         <span style="color:#cbd5e1;">|</span>
-        <a href="privacy.html">개인정보처리방침</a>
+        <span class="footer-nav-link" data-href="privacy.html" role="link" tabindex="0" style="cursor:pointer;">개인정보처리방침</span>
         <span style="color:#cbd5e1;">|</span>
-        <a href="copyright.html">저작권정책</a>
+        <span class="footer-nav-link" data-href="copyright.html" role="link" tabindex="0" style="cursor:pointer;">저작권정책</span>
         <span style="color:#cbd5e1;">|</span>
         <span style="color:#64748b;">Copyright &copy; 2026 SmartGong. All Rights Reserved.</span>
       </div>
     </footer>
+
+    <script>
+      document.querySelectorAll('.footer-nav-link').forEach(function (el) {
+        var url = el.getAttribute('data-href');
+        var newTab = el.getAttribute('data-newtab') === '1';
+        function go() {
+          if (newTab) { window.open(url, '_blank', 'noopener'); }
+          else { window.location.href = url; }
+        }
+        el.addEventListener('click', go);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+        });
+      });
+    </script>
   </div>
 </body>
 </html>
