@@ -2023,7 +2023,7 @@ async function mergeFilesCompressed() {
      ============================================================ -->
 <script>
 (function () {
-  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'hwpx'];
+  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'hwpx', 'xlsx', 'xls'];
   const LOG_PREFIX = '[ZIP확장]';
 
   // ============================================================
@@ -2181,6 +2181,8 @@ async function mergeFilesCompressed() {
       case 'jpeg': return 'image/jpeg';
       case 'png': return 'image/png';
       case 'webp': return 'image/webp';
+      case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'xls': return 'application/vnd.ms-excel';
       default: return 'application/octet-stream'; // hwpx 등
     }
   }
