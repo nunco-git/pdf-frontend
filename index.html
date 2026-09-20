@@ -414,9 +414,27 @@
       resize: vertical;
     }
     .preview-panel:hover { border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(15,23,42,0.08); }
-    .preview-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 8px; }
+    /* 모바일 등에서 PDF·한글·엑셀을 화면 전체로 크게 보기 위한 전체화면 모드.
+       실제 브라우저 Fullscreen API 대신 화면 전체를 덮는 고정(overlay) 레이어로
+       구현했다 — iOS Safari 등 일부 브라우저는 임의 요소의 Fullscreen API를
+       지원하지 않기 때문에, 이 방식이 기기 종류와 상관없이 항상 동작한다. */
+    .preview-panel.is-fullscreen {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      max-width: 100vw !important;
+      z-index: 999999;
+      border-radius: 0;
+      margin: 0;
+      resize: none;
+    }
+    body.preview-fullscreen-lock { overflow: hidden; }
+    .preview-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 8px; flex-wrap: wrap; }
     .preview-title { font-size: 14px; font-weight: bold; color: #334155; text-align: left; }
-    .preview-zoom-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .preview-zoom-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    #preview-fullscreen-btn.active { background: #ea580c; color: #fff; border-color: #ea580c; }
     .zoom-btn {
       border: 1px solid #cbd5e1;
       background: white;
@@ -694,6 +712,10 @@
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
       .title-main { font-size: 1.1rem; }
+      /* 손가락으로 누르기 편하도록 미리보기 상단 버튼들을 좀 더 크게 */
+      .zoom-btn { width: 32px; height: 32px; font-size: 16px; }
+      .zoom-fit-btn { width: auto; padding: 0 10px; font-size: 12.5px; }
+      #preview-fullscreen-btn { padding: 0 10px; }
     }
     @media (max-width: 480px) {
       body { padding: 12px; }
@@ -766,6 +788,7 @@
               <button type="button" class="zoom-btn" id="preview-zoom-in-btn" title="확대">＋</button>
               <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-width-btn" title="가로 맞춤">↔ 가로맞춤</button>
               <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-height-btn" title="세로 맞춤">↕ 세로맞춤</button>
+              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fullscreen-btn" title="전체화면으로 크게 보기" onclick="togglePreviewFullscreen()">⛶ 전체화면</button>
             </div>
           </div>
           <div class="preview-box" id="previewBox">
@@ -793,44 +816,25 @@
 
       <footer style="width:100%; margin-top:24px; padding-top:20px; border-top:1px solid #e2e8f0; font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; font-size:15px; color:#94a3b8;">
-          <span class="footer-nav-link" data-href="https://smartgong.kr/" data-newtab="1" role="link" tabindex="0" style="display:inline-flex; align-items:center; gap:6px; color:#0f172a; text-decoration:none; font-weight:800; font-size:16px; cursor:pointer;">
+          <a href="https://smartgong.kr/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; color:#0f172a; text-decoration:none; font-weight:800; font-size:16px;">
             <img src="smartgong_logo_icon.png" alt="스마트공" style="height:34px; width:auto;">
             <span>스마트공</span>
             <span style="color:#94a3b8; font-weight:600; font-size:15px;">smartgong.kr</span>
-          </span>
+          </a>
           <span style="color:#cbd5e1;">|</span>
-          <span class="footer-nav-link" data-href="about.html" role="link" tabindex="0" style="color:#64748b; text-decoration:none; cursor:pointer;">서비스 안내</span>
+          <a href="terms.html" style="color:#64748b; text-decoration:none;">이용약관</a>
           <span style="color:#cbd5e1;">|</span>
-          <span class="footer-nav-link" data-href="services.html" role="link" tabindex="0" style="color:#64748b; text-decoration:none; cursor:pointer;">서비스 목록</span>
+          <a href="privacy.html" style="color:#64748b; text-decoration:none;">개인정보처리방침</a>
           <span style="color:#cbd5e1;">|</span>
-          <span class="footer-nav-link" data-href="terms.html" role="link" tabindex="0" style="color:#64748b; text-decoration:none; cursor:pointer;">이용약관</span>
+          <a href="copyright.html" style="color:#64748b; text-decoration:none;">저작권정책</a>
           <span style="color:#cbd5e1;">|</span>
-          <span class="footer-nav-link" data-href="privacy.html" role="link" tabindex="0" style="color:#64748b; text-decoration:none; cursor:pointer;">개인정보처리방침</span>
-          <span style="color:#cbd5e1;">|</span>
-          <span class="footer-nav-link" data-href="copyright.html" role="link" tabindex="0" style="color:#64748b; text-decoration:none; cursor:pointer;">저작권정책</span>
-          <span style="color:#cbd5e1;">|</span>
-          <span style="color:#64748b;">smartgongmaster@gmail.com</span>
+          <a href="https://mail.google.com/mail/?view=cm&fs=1&to=smartgongmaster@gmail.com" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">smartgongmaster@gmail.com</a>
           <span style="color:#cbd5e1;">|</span>
           <span style="color:#64748b;">Copyright &copy; 2026 SmartGong. All Rights Reserved.</span>
         </div>
       </footer>
     </div>
   </div>
-
-  <script>
-    document.querySelectorAll('.footer-nav-link').forEach(function (el) {
-      var url = el.getAttribute('data-href');
-      var newTab = el.getAttribute('data-newtab') === '1';
-      function go() {
-        if (newTab) { window.open(url, '_blank', 'noopener'); }
-        else { window.location.href = url; }
-      }
-      el.addEventListener('click', go);
-      el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
-      });
-    });
-  </script>
 
   <script>
   // XSS 방지용: 업로드된 파일명을 화면(innerHTML)에 표시하기 전에 이스케이프 처리
@@ -2252,6 +2256,40 @@ async function mergeFilesCompressed() {
   // (window) 스코프에서 실행된다. 이 함수는 IIFE 안에 선언되어 있어서 그냥
   // 두면 "openOriginalFile is not defined" 오류가 나므로 명시적으로 노출한다.
   window.openOriginalFile = openOriginalFile;
+
+  // ============================================================
+  // 미리보기 전체화면 모드 (모바일에서 PDF/한글/엑셀을 더 크게 보기 위함)
+  // - 실제 Fullscreen API 대신 화면 전체를 덮는 고정 레이어 방식이라
+  //   iOS Safari를 포함한 모든 기기/브라우저에서 동일하게 동작한다.
+  // - 전체화면으로 전환한 직후에는 미리보기 패널의 크기가 커지므로,
+  //   가로맞춤/세로맞춤 계산이 새 크기 기준으로 다시 되도록 현재 선택된
+  //   파일의 미리보기를 다시 그려준다.
+  // ============================================================
+  let previewFullscreenActive = false;
+
+  function togglePreviewFullscreen() {
+    const panel = document.querySelector('.preview-panel');
+    if (!panel) return;
+    previewFullscreenActive = !previewFullscreenActive;
+    panel.classList.toggle('is-fullscreen', previewFullscreenActive);
+    document.body.classList.toggle('preview-fullscreen-lock', previewFullscreenActive);
+    const btn = document.getElementById('preview-fullscreen-btn');
+    if (btn) {
+      btn.textContent = previewFullscreenActive ? '✕ 전체화면 닫기' : '⛶ 전체화면';
+      btn.classList.toggle('active', previewFullscreenActive);
+    }
+    // 레이아웃이 실제로 바뀐 뒤(다음 프레임)에 다시 그려야 새 크기를 정확히 잰다
+    requestAnimationFrame(() => {
+      if (typeof selectedIndex === 'number' && selectedIndex !== null && typeof fileList !== 'undefined' && fileList[selectedIndex] && typeof window.showPreview === 'function') {
+        window.showPreview(fileList[selectedIndex]);
+      }
+    });
+  }
+  window.togglePreviewFullscreen = togglePreviewFullscreen;
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && previewFullscreenActive) togglePreviewFullscreen();
+  });
 
   const dblClickListEl = document.getElementById('fileListItems');
   if (dblClickListEl) {
