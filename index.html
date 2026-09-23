@@ -88,6 +88,8 @@
   </script>
   <!-- 변환된 이미지가 여러 장일 경우 zip으로 묶어 다운로드하기 위한 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <!-- [보안 수정] xlsx@0.18.5(npm판)에는 알려진 취약점(CVE-2023-30533 프로토타입 오염,
        CVE-2024-22363 ReDoS)이 있고, npm에는 고쳐진 버전이 올라오지 않는다 (SheetJS가
        2023년부터 자체 CDN에서만 배포). 그래서 SRI 대신 self-host 방식으로 바꾼다:
@@ -754,7 +756,7 @@
             </div>
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX, 엑셀파일 미리보기만 가능)</span></span></li>
+              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지(TIFF, 아이폰 HEIC 포함) 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX, 엑셀파일 미리보기만 가능)</span></span></li>
               <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 미리보기</strong> <span class="feat-desc">: 압축파일(ZIP파일)도 미리보기 가능</span></span></li>
             </ul>
           </div>
@@ -765,7 +767,7 @@
             <span class="drop-icon">📂</span>
             <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
             <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX, 엑셀파일은 미리보기만 가능)</span>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
+            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
       </div>
@@ -901,6 +903,8 @@ function getFileKind(file) {
   if (file.type === 'application/pdf') return 'pdf';
   if (file.type.startsWith('image/')) return 'image';
   const ext = file.name.toLowerCase().split('.').pop();
+  if (ext === 'tif' || ext === 'tiff') return 'image'; // 일부 환경은 TIFF의 file.type을 못 채워줌
+  if (ext === 'heic' || ext === 'heif') return 'image'; // 아이폰 사진(HEIC/HEIF)도 마찬가지
   if (ext === 'hwpx') return 'hwpx';
   return null;
 }
@@ -1079,6 +1083,80 @@ function removeItem(index, e) {
   else showPreview(null);
 }
 
+// ============================================================
+// TIFF 등 브라우저가 <img>로 직접 못 여는 이미지 형식 지원
+// - 브라우저는 TIFF를 native로 디코딩하지 못하므로, UTIF.js로 직접 픽셀을
+//   해석해서 캔버스에 그린다. 그 캔버스는 <img> 대신 어디서나 그대로 쓸 수
+//   있다(폭/높이, ctx.drawImage() 모두 <img>와 동일하게 동작).
+// - 그 외 형식(JPG/PNG/WebP/GIF/BMP 등, 브라우저가 원래 지원하는 모든 형식)은
+//   기존처럼 <img>로 그대로 불러온다 — 즉 "이미지 뷰어가 보여줄 수 있는" 형식은
+//   전부 미리보기/병합/변환에서 다 볼 수 있게 된다.
+// ============================================================
+function isTiffFile(file) {
+  const ext = (file.name || '').toLowerCase().split('.').pop();
+  return ext === 'tif' || ext === 'tiff' || (file.type || '').toLowerCase() === 'image/tiff';
+}
+
+function isHeicFile(file) {
+  const ext = (file.name || '').toLowerCase().split('.').pop();
+  return ext === 'heic' || ext === 'heif' || ['image/heic', 'image/heif'].includes((file.type || '').toLowerCase());
+}
+
+// 아이폰 사진(HEIC/HEIF)을 JPEG로 변환한다. heic2any는 내부적으로 웹 워커를
+// 사용해 디코딩하며, 연속촬영(버스트) 이미지처럼 여러 장이 나오는 경우 첫
+// 번째 사진만 사용한다.
+async function convertHeicToJpegBlob(file) {
+  if (typeof heic2any === 'undefined') {
+    throw new Error('HEIC 변환기(heic2any)를 불러오지 못했습니다.');
+  }
+  const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+async function decodeTiffToCanvas(file) {
+  if (typeof UTIF === 'undefined') {
+    throw new Error('TIFF 디코더(UTIF)를 불러오지 못했습니다.');
+  }
+  const buffer = await file.arrayBuffer();
+  const ifds = UTIF.decode(buffer);
+  if (!ifds || ifds.length === 0) throw new Error('TIFF 파일을 해석하지 못했습니다.');
+  UTIF.decodeImage(buffer, ifds[0]);
+  const rgba = UTIF.toRGBA8(ifds[0]);
+  const canvas = document.createElement('canvas');
+  canvas.width = ifds[0].width;
+  canvas.height = ifds[0].height;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(ifds[0].width, ifds[0].height);
+  imageData.data.set(rgba);
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+// 이미지 파일을 "그릴 수 있는 소스"(HTMLImageElement 또는, TIFF인 경우
+// HTMLCanvasElement)로 불러온다. 둘 다 .width/.height를 갖고 ctx.drawImage()에
+// 그대로 쓸 수 있어서, 호출하는 쪽은 TIFF인지 신경 쓸 필요가 없다.
+async function loadDrawableImage(file) {
+  if (isTiffFile(file)) {
+    return await decodeTiffToCanvas(file);
+  }
+  let sourceBlob = file;
+  if (isHeicFile(file)) {
+    sourceBlob = await convertHeicToJpegBlob(file);
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다: ' + file.name));
+    reader.readAsDataURL(sourceBlob);
+  });
+  return await new Promise((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('이미지 형식을 지원하지 않습니다: ' + file.name));
+    el.src = dataUrl;
+  });
+}
+
 async function showPreview(itemData) {
   const previewBox = document.getElementById('previewBox');
   previewBox.innerHTML = '';
@@ -1122,15 +1200,39 @@ async function showPreview(itemData) {
     // - 가로 맞춤: 박스 너비에 꽉 채우고, 세로로 넘치는 부분은 스크롤해서 보게 한다
     //   (PDF의 가로 맞춤이 확대되어 커 보이는 것과 같은 효과).
     previewBox.classList.toggle('image-fit-width', previewFitMode === 'width');
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = document.createElement('img');
-      img.id = 'previewElement';
-      img.src = e.target.result;
-      img.style.transform = `rotate(${itemData.rotation}deg)`;
-      previewBox.appendChild(img);
-    };
-    reader.readAsDataURL(file);
+    if (isTiffFile(file)) {
+      try {
+        const tiffCanvas = await decodeTiffToCanvas(file);
+        const img = document.createElement('img');
+        img.id = 'previewElement';
+        img.src = tiffCanvas.toDataURL('image/png');
+        img.style.transform = `rotate(${itemData.rotation}deg)`;
+        previewBox.appendChild(img);
+      } catch (err) {
+        previewBox.innerHTML = '<div class="preview-placeholder">TIFF 파일을 미리 볼 수 없습니다.<br>' + err.message + '</div>';
+      }
+    } else if (isHeicFile(file)) {
+      try {
+        const jpegBlob = await convertHeicToJpegBlob(file);
+        const img = document.createElement('img');
+        img.id = 'previewElement';
+        img.src = URL.createObjectURL(jpegBlob);
+        img.style.transform = `rotate(${itemData.rotation}deg)`;
+        previewBox.appendChild(img);
+      } catch (err) {
+        previewBox.innerHTML = '<div class="preview-placeholder">HEIC(아이폰 사진) 파일을 미리 볼 수 없습니다.<br>' + err.message + '</div>';
+      }
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.id = 'previewElement';
+        img.src = e.target.result;
+        img.style.transform = `rotate(${itemData.rotation}deg)`;
+        previewBox.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    }
   } else if (file.type === 'application/pdf') {
     try {
       const fileBytes = await file.arrayBuffer();
@@ -1597,25 +1699,17 @@ function applyPreviewRotation(deg) {
 }
 
 async function convertImageToPngBytes(file) {
+  const source = await loadDrawableImage(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  canvas.getContext('2d').drawImage(source, 0, 0);
   return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        canvas.toBlob((blob) => {
-          const outReader = new FileReader();
-          outReader.onloadend = () => resolve(outReader.result);
-          outReader.readAsArrayBuffer(blob);
-        }, 'image/png');
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    canvas.toBlob((blob) => {
+      const outReader = new FileReader();
+      outReader.onloadend = () => resolve(outReader.result);
+      outReader.readAsArrayBuffer(blob);
+    }, 'image/png');
   });
 }
 
@@ -1757,16 +1851,7 @@ async function exportAsImages(quality) {
   }
 
   async function renderImageFileToCanvas(file, rotation) {
-    const dataUrl = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-    const img = await new Promise((resolve) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.src = dataUrl;
-    });
+    const img = await loadDrawableImage(file);
     const swap = (rotation === 90 || rotation === 270);
     const canvas = document.createElement('canvas');
     canvas.width = swap ? img.height : img.width;
@@ -1951,16 +2036,7 @@ async function mergeFilesCompressed() {
         const outPage = mergedPdf.addPage([pageWidthPt, pageHeightPt]);
         outPage.drawImage(embedded, { x: 0, y: 0, width: pageWidthPt, height: pageHeightPt });
       } else {
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(job.file);
-        });
-        const img = await new Promise((resolve) => {
-          const el = new Image();
-          el.onload = () => resolve(el);
-          el.src = dataUrl;
-        });
+        const img = await loadDrawableImage(job.file);
 
         const swap = (job.rotation === 90 || job.rotation === 270);
         const naturalW = swap ? img.height : img.width;
@@ -2027,7 +2103,7 @@ async function mergeFilesCompressed() {
      ============================================================ -->
 <script>
 (function () {
-  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'hwpx', 'xlsx', 'xls'];
+  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff', 'heic', 'heif', 'hwpx', 'xlsx', 'xls'];
   const LOG_PREFIX = '[ZIP확장]';
 
   // ============================================================
@@ -2185,6 +2261,10 @@ async function mergeFilesCompressed() {
       case 'jpeg': return 'image/jpeg';
       case 'png': return 'image/png';
       case 'webp': return 'image/webp';
+      case 'tif':
+      case 'tiff': return 'image/tiff';
+      case 'heic': return 'image/heic';
+      case 'heif': return 'image/heif';
       case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       case 'xls': return 'application/vnd.ms-excel';
       default: return 'application/octet-stream'; // hwpx 등
