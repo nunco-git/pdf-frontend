@@ -96,6 +96,9 @@
        cdn.sheetjs.com에서 받은 고쳐진 버전(0.20.3)을 이 저장소의 vendor/xlsx/ 폴더에
        넣어 직접 서빙한다. -->
   <script src="./vendor/xlsx/xlsx.full.min.js"></script>
+  <!-- 워드(docx) 미리보기용 mammoth.js: docx의 XML 구조를 읽어 HTML로 변환해 화면에 그린다.
+       (옛 이진 형식인 .doc는 mammoth가 지원하지 않아 미리보기 대상에서 제외됨) -->
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.1/mammoth.browser.min.js" integrity="sha256-eK/B970IeSNwEQy1SUbqSK22SzWtIfYSbSHy2OANOgA=" crossorigin="anonymous"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -432,6 +435,13 @@
       margin: 0;
       resize: none;
     }
+    /* 모바일 브라우저는 주소창/도구모음이 나타났다 사라졌다 하면서 100vh가
+       실제 보이는 화면보다 커지는 경우가 있다. 지원하는 브라우저는 100dvh(동적
+       뷰포트 높이)로 한 번 더 덮어써서 실제 보이는 영역에 정확히 맞춘다
+       (미지원 브라우저는 이 줄을 무시하고 위의 100vh가 그대로 적용됨). */
+    @supports (height: 100dvh) {
+      .preview-panel.is-fullscreen { height: 100dvh !important; max-height: 100dvh !important; }
+    }
     body.preview-fullscreen-lock { overflow: hidden; }
     .preview-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 8px; flex-wrap: wrap; }
     .preview-title { font-size: 14px; font-weight: bold; color: #334155; text-align: left; }
@@ -654,6 +664,26 @@
       white-space: nowrap;
     }
 
+    /* 워드(docx) 미리보기 */
+    .preview-box.docx-mode { display: block; overflow-y: auto; overflow-x: hidden; padding: 0; }
+    .docx-preview {
+      background: #fff;
+      border-radius: 4px;
+      margin: 10px;
+      padding: 24px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1e293b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .docx-preview table { border-collapse: collapse; margin: 8px 0; }
+    .docx-preview td, .docx-preview th { border: 1px solid #cbd5e1; padding: 4px 8px; vertical-align: top; }
+    .docx-preview img { max-width: 100%; height: auto; }
+    .docx-preview p { margin: 0 0 8px 0; }
+
     .btn-main {
       background-color: #2563eb;
       color: white;
@@ -734,6 +764,56 @@
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
       .modal-content { padding: 18px; }
     }
+
+    /* ============================================================
+       화면(뷰포트)에 맞춰 앱 전체가 스크롤 없이 "한 화면"처럼 보이게 하기
+       - 노트북처럼 가로는 넓어도(>1180px, 즉 아래 모바일 레이아웃이 아닌 경우)
+         세로 해상도가 낮으면 본문(main-content)이 화면보다 커져서 페이지 전체가
+         스크롤되던 문제를 해결한다.
+       - body/app-container/main-content를 실제 뷰포트 높이(100vh/100%)에 맞춰
+         고정하고, 넘치는 내용은 (이미 만들어져 있는) 파일목록/미리보기 패널
+         안쪽에서만 스크롤되게 한다. 혹시라도 정말 안 맞는 극단적인 경우를
+         대비해 body에 overflow-y:auto를 안전장치로 남겨둔다.
+       - 모바일(≤1180px, 세로로 쌓이는 레이아웃)은 원래도 스크롤 되는 게
+         자연스러운 방식이라 그대로 둔다.
+       ============================================================ */
+    @media (min-width: 1181px) {
+      html, body { height: 100%; }
+      body { height: 100vh; min-height: 0; padding: 24px 20px; overflow-y: auto; }
+      .app-container { height: 100%; }
+      .main-content { height: 100%; min-height: 0; max-height: 100%; overflow-y: auto; }
+    }
+
+    /* 노트북 등 세로 해상도가 낮은 화면: 여백/글자 크기를 줄여 최대한 스크롤 없이 맞춘다 */
+    @media (min-width: 1181px) and (max-height: 800px) {
+      body { padding: 14px 20px; }
+      .main-content { padding: 20px; border-radius: 12px; }
+      .top-section { min-height: 108px; margin-bottom: 12px; }
+      .title-icon { font-size: 1.15rem; }
+      .title-main { font-size: 1.35rem; }
+      .title-security-badge { font-size: 0.62rem; padding: 2px 6px; }
+      .title-hwp-link { font-size: 0.7rem; padding: 4px 8px; }
+      .security-banner-header { margin-bottom: 4px; }
+      .security-features { margin: 0; }
+      .file-select-box { padding: 8px; margin-bottom: 0; }
+      .file-select-box strong { font-size: 13.5px; line-height: 1.35; }
+      .file-list-container, .preview-panel { min-height: 140px; }
+      .action-btn-group { gap: 6px; }
+      .output-name-row input, .main-btn-row .btn-main, .main-btn-row .btn-secondary,
+      .main-btn-row .btn-compress, .btn-secondary { padding: 9px; font-size: 13.5px; }
+      #status { margin-top: 8px; }
+      footer { margin-top: 12px !important; padding-top: 10px !important; }
+      footer img { height: 24px !important; }
+    }
+
+    /* 매우 낮은 화면(작은 창/저해상도 노트북)에서는 한 번 더 압축 */
+    @media (min-width: 1181px) and (max-height: 620px) {
+      .top-section { min-height: 84px; }
+      .title-main { font-size: 1.1rem; }
+      .title-hwp-link { display: none; }
+      .file-list-container, .preview-panel { min-height: 110px; }
+      .compress-note { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -756,7 +836,7 @@
             </div>
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지(TIFF, 아이폰 HEIC 포함) 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX, 엑셀파일 미리보기만 가능)</span></span></li>
+              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지(TIFF, 아이폰 HEIC 포함) 미리보기·병합 지원</strong> <span class="feat-desc">: 회전, 페이지스크롤 가능(HWPX, 엑셀·워드 파일은 미리보기만 가능)</span></span></li>
               <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 미리보기</strong> <span class="feat-desc">: 압축파일(ZIP파일)도 미리보기 가능</span></span></li>
             </ul>
           </div>
@@ -766,8 +846,8 @@
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <span class="drop-icon">📂</span>
             <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
-            <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX, 엑셀파일은 미리보기만 가능)</span>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
+            <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX, 엑셀·워드(.docx) 파일은 미리보기만 가능)</span>
+            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
       </div>
@@ -1030,7 +1110,7 @@ function renderFileList() {
               <span title="${__escFileName(file.name)}">${__escFileName(file.name)}</span>
             </div>
             <div class="btn-group">
-              <button class="btn-sm btn-open" title="${kind === 'hwpx' ? '원본 파일을 다운로드해서 한글(HWP)에서 열기' : (kind === 'excel' ? '원본 파일을 다운로드해서 엑셀에서 열기' : '원본 파일을 새 탭에서 열기')}" onclick="openOriginalFile(${index}, event)">${kind === 'hwpx' ? '📥 한글로 열기' : (kind === 'excel' ? '📥 엑셀로 열기' : '🔎 실행')}</button>
+              <button class="btn-sm btn-open" title="${kind === 'hwpx' ? '원본 파일을 다운로드해서 한글(HWP)에서 열기' : (kind === 'excel' ? '원본 파일을 다운로드해서 엑셀에서 열기' : (kind === 'docx' ? '원본 파일을 다운로드해서 워드에서 열기' : '원본 파일을 새 탭에서 열기'))}" onclick="openOriginalFile(${index}, event)">${kind === 'hwpx' ? '📥 한글로 열기' : (kind === 'excel' ? '📥 엑셀로 열기' : (kind === 'docx' ? '📥 워드로 열기' : '🔎 실행'))}</button>
               <button class="btn-sm btn-del" onclick="removeItem(${index}, event)">✕</button>
             </div>
           </div>
@@ -2103,7 +2183,7 @@ async function mergeFilesCompressed() {
      ============================================================ -->
 <script>
 (function () {
-  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff', 'heic', 'heif', 'hwpx', 'xlsx', 'xls'];
+  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff', 'heic', 'heif', 'hwpx', 'xlsx', 'xls', 'docx', 'doc'];
   const LOG_PREFIX = '[ZIP확장]';
 
   // ============================================================
@@ -2118,6 +2198,17 @@ async function mergeFilesCompressed() {
   const EXCEL_LOG_PREFIX = '[엑셀미리보기]';
   const EXCEL_EXTS = ['xlsx', 'xls'];
 
+  // ============================================================
+  // 워드(doc/docx) 파일 미리보기
+  // - mammoth.js로 docx의 XML을 읽어 HTML로 변환해 그대로 화면에 그린다(서버 전송 없음).
+  // - 옛 이진 형식인 .doc는 mammoth가 지원하지 않으므로, 인식은 하되
+  //   미리보기 시도 시 안내 메시지만 보여준다(다운로드해서 워드로 열기는 가능).
+  // - 엑셀과 동일하게 "미리보기 전용"이며, 병합/이미지변환/최대압축 대상에는 포함되지 않는다
+  //   (원본 로직이 pdf/이미지 종류가 아니면 조용히 건너뜀).
+  // ============================================================
+  const DOCX_LOG_PREFIX = '[워드미리보기]';
+  const WORD_EXTS = ['docx', 'doc'];
+
   if (typeof window.getFileKind === 'function') {
     const originalGetFileKind = window.getFileKind;
     window.getFileKind = function (file) {
@@ -2125,6 +2216,7 @@ async function mergeFilesCompressed() {
       if (kind) return kind;
       const ext = (file.name || '').toLowerCase().split('.').pop();
       if (EXCEL_EXTS.includes(ext)) return 'excel';
+      if (WORD_EXTS.includes(ext)) return 'docx';
       return null;
     };
   } else {
@@ -2234,17 +2326,53 @@ async function mergeFilesCompressed() {
     }
   }
 
+  async function showDocxPreview(file, box) {
+    box.classList.add('docx-mode');
+    box.innerHTML = '<div class="preview-placeholder">워드 파일을 불러오는 중...</div>';
+
+    const ext = (file.name || '').toLowerCase().split('.').pop();
+    if (ext === 'doc') {
+      box.innerHTML = '<div class="preview-placeholder">이전 버전 워드 형식(.doc)은 미리보기를 지원하지 않습니다.<br>"실행" 버튼으로 다운로드해서 워드에서 열어보시거나,<br>워드에서 .docx로 다시 저장한 뒤 시도해 주세요.</div>';
+      return;
+    }
+
+    try {
+      if (typeof mammoth === 'undefined') throw new Error('워드 미리보기 라이브러리를 불러오지 못했습니다.');
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+
+      box.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'docx-preview';
+      wrap.innerHTML = result.value;
+      box.appendChild(wrap);
+
+      if (result.messages && result.messages.length > 0) {
+        console.warn(DOCX_LOG_PREFIX, '일부 서식은 변환되지 않았을 수 있습니다:', result.messages);
+      }
+    } catch (err) {
+      console.error(DOCX_LOG_PREFIX, '워드 미리보기 오류:', err);
+      box.innerHTML = '<div class="preview-placeholder">워드 파일을 미리 볼 수 없습니다.<br>' + (err && err.message ? err.message : '') + '</div>';
+    }
+  }
+
   if (typeof window.showPreview === 'function') {
     const originalShowPreview = window.showPreview;
     window.showPreview = async function (item) {
       const box = document.getElementById('previewBox');
-      if (box) box.classList.remove('excel-mode');
+      if (box) box.classList.remove('excel-mode', 'docx-mode');
       if (item) {
         const kind = item.kind || window.getFileKind(item.file);
         if (kind === 'excel') {
           box.innerHTML = '';
           box.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
           await showExcelPreview(item.file, box);
+          return;
+        }
+        if (kind === 'docx') {
+          box.innerHTML = '';
+          box.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
+          await showDocxPreview(item.file, box);
           return;
         }
       }
@@ -2267,6 +2395,8 @@ async function mergeFilesCompressed() {
       case 'heif': return 'image/heif';
       case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       case 'xls': return 'application/vnd.ms-excel';
+      case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'doc': return 'application/msword';
       default: return 'application/octet-stream'; // hwpx 등
     }
   }
@@ -2310,11 +2440,11 @@ async function mergeFilesCompressed() {
     const fileKind = kind || (typeof getFileKind === 'function' ? getFileKind(file) : null);
     const url = URL.createObjectURL(file);
 
-    if (fileKind === 'hwpx' || fileKind === 'excel') {
-      const programName = fileKind === 'hwpx' ? '한글(HWP)' : '엑셀';
+    if (fileKind === 'hwpx' || fileKind === 'excel' || fileKind === 'docx') {
+      const programName = fileKind === 'hwpx' ? '한글(HWP)' : (fileKind === 'excel' ? '엑셀' : '워드');
       const a = document.createElement('a');
       a.href = url;
-      a.download = file.name || (fileKind === 'hwpx' ? 'document.hwpx' : 'document.xlsx');
+      a.download = file.name || (fileKind === 'hwpx' ? 'document.hwpx' : (fileKind === 'excel' ? 'document.xlsx' : 'document.docx'));
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -2375,6 +2505,44 @@ async function mergeFilesCompressed() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && previewFullscreenActive) togglePreviewFullscreen();
+  });
+
+  // ============================================================
+  // 휴대폰을 세로↔가로로 돌렸을 때 미리보기가 새 화면 크기에 맞춰 다시
+  // 그려지도록 처리한다.
+  // - 문제: previewPanelHeightInitialized 값이 한 번 true가 되면 패널
+  //   높이(그리고 그걸 기준으로 계산하는 PDF "세로 맞춤" 높이)가 최초에
+  //   열었던 방향(세로) 기준으로 고정된 채 다시 계산되지 않아서, 이후 가로로
+  //   돌리거나 가로맞춤/전체화면을 눌러도 예전 세로 기준 크기 그대로 작게
+  //   보이는 문제가 있었다.
+  // - 데스크톱(가로 1180px 초과)에서는 사용자가 .preview-panel을 직접 드래그로
+  //   크기 조절(resize:vertical)할 수 있으므로, 그 값을 덮어쓰지 않도록
+  //   모바일 레이아웃일 때만 다시 계산한다.
+  // ============================================================
+  const mobileLayoutQuery = window.matchMedia('(max-width: 1180px)');
+  let orientationRerenderTimer = null;
+  function recalcPreviewForViewportChange() {
+    if (!mobileLayoutQuery.matches) return; // 데스크톱은 사용자의 수동 크기조절을 존중
+    const previewPanelEl = document.querySelector('.preview-panel');
+    if (previewPanelEl && !previewPanelEl.classList.contains('is-fullscreen')) {
+      const stableHeight = Math.max(window.innerHeight * 0.7, 320);
+      previewPanelEl.style.height = `${stableHeight}px`;
+      previewPanelHeightInitialized = true;
+    }
+    // 현재 보고 있는 파일이 있으면 새 크기 기준으로 다시 렌더링(가로맞춤/세로맞춤 폭·높이 재계산)
+    if (typeof selectedIndex === 'number' && selectedIndex !== null && fileList[selectedIndex] && typeof window.showPreview === 'function') {
+      window.showPreview(fileList[selectedIndex]);
+    }
+  }
+  window.addEventListener('resize', () => {
+    clearTimeout(orientationRerenderTimer);
+    orientationRerenderTimer = setTimeout(recalcPreviewForViewportChange, 150);
+  });
+  // orientationchange 직후에는 일부 기기에서 innerWidth/innerHeight가 아직
+  // 갱신되기 전이라, 살짝 지연을 더 주고 한 번 더 계산한다.
+  window.addEventListener('orientationchange', () => {
+    clearTimeout(orientationRerenderTimer);
+    orientationRerenderTimer = setTimeout(recalcPreviewForViewportChange, 350);
   });
 
   const dblClickListEl = document.getElementById('fileListItems');
@@ -2925,6 +3093,7 @@ async function mergeFilesCompressed() {
     setTimeout(function () {
       const missing = [];
       if (typeof XLSX === 'undefined') missing.push('XLSX(엑셀 미리보기용)');
+      if (typeof mammoth === 'undefined') missing.push('mammoth(워드 미리보기용)');
       if (typeof JSZip === 'undefined') missing.push('JSZip(압축파일 처리용)');
       if (typeof PDFLib === 'undefined') missing.push('PDFLib(PDF 병합용)');
       if (missing.length > 0) {
