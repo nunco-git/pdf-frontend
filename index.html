@@ -291,6 +291,32 @@
     }
     input[type="file"] { display: none; }
 
+    /* ============================================================
+       실제로 파일을 미리보기 중일 때(previewBox에 무언가 표시된 상태)는
+       상단 특징 안내(top-col-guide)와 드래그드롭존(top-col-drop)의 크기를
+       줄여서, 그만큼 아래 목록/미리보기 영역(editor-layout)과 병합버튼 줄이
+       화면에 더 많이/일찍 보이도록 한다. (JS의 showPreview()에서
+       .main-content에 has-active-preview 클래스를 붙였다 뗐다 한다.)
+       ============================================================ */
+    .main-content.has-active-preview .top-section { min-height: 0; margin-bottom: 10px; }
+    .main-content.has-active-preview .top-col-title {
+      flex-direction: row;
+      gap: 8px;
+      padding: 6px 10px;
+    }
+    .main-content.has-active-preview .title-icon { font-size: 1.1rem; }
+    .main-content.has-active-preview .title-main { font-size: 1rem; }
+    .main-content.has-active-preview .title-security-badge,
+    .main-content.has-active-preview .title-hwp-link { display: none; }
+    .main-content.has-active-preview .security-banner { padding: 6px 12px; }
+    .main-content.has-active-preview .security-banner-header { margin-bottom: 0; }
+    .main-content.has-active-preview .security-banner-header strong { font-size: 13px; }
+    /* 특징 3줄 목록은 미리보기 중엔 굳이 볼 필요가 없으니 접어둔다(숨김) */
+    .main-content.has-active-preview .security-features { display: none; }
+    .main-content.has-active-preview .top-col-drop .file-select-box { padding: 6px 10px; }
+    .main-content.has-active-preview .file-select-box .drop-icon { display: none; }
+    .main-content.has-active-preview .file-select-box strong { font-size: 12.5px; line-height: 1.3; }
+
     .editor-layout {
       display: flex;
       flex-wrap: nowrap;
@@ -820,6 +846,11 @@
       #status { margin-top: 8px; }
       footer { margin-top: 12px !important; padding-top: 10px !important; }
       footer img { height: 24px !important; }
+      /* 세로 공간이 부족한 노트북에서는 버튼 4개가 한 줄에 끼어 병합버튼까지
+         작아지고 안 보이기 쉬우므로, 병합버튼은 항상 자기 혼자 한 줄 전체를
+         차지하게 하고 나머지 3개(최대압축/이미지 고화질·저화질)는 그 아래
+         한 줄로 배치한다. */
+      .main-btn-row .btn-main { flex-basis: 100%; }
     }
 
     /* 매우 낮은 화면(작은 창/저해상도 노트북)에서는 한 번 더 압축 */
@@ -829,6 +860,15 @@
       .title-hwp-link { display: none; }
       .file-list-container, .preview-panel { min-height: 110px; }
       .compress-note { display: none; }
+    }
+
+    /* 노트북 화면 폭이 좁아서(창을 덜 넓게 쓰는 경우 등) 버튼 4개가 한 줄에
+       다 들어가지 못하고 병합버튼까지 같이 찌그러지는 경우를 위한 안전장치.
+       병합버튼은 항상 자기 혼자 한 줄 전체를 차지하게 하고, 나머지 3개
+       버튼은 그 아래 한 줄에 나란히 배치한다(모바일 전용 세로 1열 배치는
+       480px 이하에서 별도로 이미 적용됨). */
+    @media (min-width: 481px) and (max-width: 1000px) {
+      .main-btn-row .btn-main { flex-basis: 100%; }
     }
   </style>
 </head>
@@ -2386,6 +2426,13 @@ async function mergeFilesCompressed() {
   if (typeof window.showPreview === 'function') {
     const originalShowPreview = window.showPreview;
     window.showPreview = async function (item) {
+      // 노트북처럼 화면(세로) 공간이 부족한 경우를 위해: 실제로 미리보기 중인
+      // 파일이 있을 때만 상단 특징 안내/드래그드롭존을 압축해서 그만큼 아래
+      // 목록/미리보기·병합버튼 쪽에 공간을 더 준다. 파일 종류(엑셀/워드/PDF 등)와
+      // 상관없이 모든 미리보기 호출을 거치는 이 지점에서 한 번에 처리한다.
+      const mainContentEl = document.querySelector('.main-content');
+      if (mainContentEl) mainContentEl.classList.toggle('has-active-preview', !!item);
+
       const box = document.getElementById('previewBox');
       if (box) box.classList.remove('excel-mode', 'docx-mode');
       if (item) {
