@@ -718,8 +718,18 @@
     /* 버튼 4개(병합, 최대압축, 이미지 고화질/저화질)를 한 줄에 배치.
        공간이 부족한 중간 너비에서는 flex-wrap으로 자연스럽게 2줄로
        접히고(줄바꿈), 실제 폰 폭(480px 이하)에서는 아래 미디어쿼리에서
-       세로 1열로 전환된다. */
-    .main-btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+       세로 1열로 전환된다.
+       (화면 맨 아래에 항상 떠 있게(position:fixed) 만들었던 적이 있었는데,
+       그러면 스크롤해서 페이지 아래쪽 안내문구/푸터를 보려고 해도 이 버튼줄이
+       그 위를 계속 덮어버리는 문제가 있어서 되돌렸다. 대신 목록/미리보기 바로
+       아래, 원래 있어야 할 위치에 자연스럽게 놓이도록 한다 — 미리보기가 짧으면
+       버튼도 그만큼 위쪽에, 미리보기가 길면 그 아래쪽에 위치하게 된다.) */
+    .main-btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: stretch;
+    }
     .main-btn-row .btn-main { flex: 4 1 200px; width: auto; font-size: 15.5px; padding: 12px 10px; }
     .main-btn-row .btn-secondary { flex: 2 1 140px; width: auto; }
     .main-btn-row .btn-compress { flex: 2 1 140px; width: auto; }
@@ -747,24 +757,6 @@
       .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
       .file-list-container { height: 220px; }
       .preview-panel { height: 440px; }
-
-      /* 모바일에서는 미리보기 패널이 화면 높이의 70%까지 커질 수 있어서(위 JS 로직),
-         병합/다운로드 버튼 등이 그 아래로 멀리 밀려나 스크롤해야만 보이는 문제가
-         있었다. 그래서 버튼 줄만 화면 하단에 고정시켜, 미리보기를 아무리 열어봐도
-         스크롤 없이 항상 눈에 보이도록 한다. */
-      .main-btn-row {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        z-index: 500;
-        background: #ffffff;
-        margin: 0;
-        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-        box-shadow: 0 -6px 16px -6px rgba(15,23,42,0.18);
-        border-top: 1px solid #e2e8f0;
-      }
-      /* 고정된 버튼 줄에 안내문구/상태메시지/푸터가 가려지지 않도록,
-         그만큼 아래쪽에 미리 여유 공간을 만들어둔다 */
-      .action-btn-group { padding-bottom: 130px; }
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -783,9 +775,6 @@
       .file-select-box strong { font-size: 14px; }
       .main-btn-row { flex-direction: column; }
       .main-btn-row .btn-main, .main-btn-row .btn-secondary, .main-btn-row .btn-compress { flex: 1 1 auto; }
-      /* 이 폭에서는 버튼 4개가 세로로 쌓이므로(위), 고정 버튼바 자체의 높이가
-         커진다 — 그만큼 아래 여유 공간도 더 넉넉하게 확보한다 */
-      .action-btn-group { padding-bottom: 260px; }
       .file-info { max-width: 55vw; }
       .opt-field { min-width: 90px; }
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
@@ -1058,6 +1047,19 @@ function resetAll() {
   draggedIndex = null;
   const inputEl = document.getElementById('fileInput');
   if (inputEl) inputEl.value = '';
+
+  // 미리보기 패널 크기를 "최초 화면" 상태로 되돌린다.
+  // (previewPanelHeightInitialized 플래그 때문에, 한 번 파일을 열어서 고정된
+  //  인라인 높이가 초기화 후에도 그대로 남아있던 문제 수정)
+  const previewPanelEl = document.querySelector('.preview-panel');
+  if (previewPanelEl) {
+    if (previewPanelEl.classList.contains('is-fullscreen') && typeof window.togglePreviewFullscreen === 'function') {
+      window.togglePreviewFullscreen(); // 전체화면 상태였다면 먼저 정상적으로 닫는다
+    }
+    previewPanelEl.style.height = '';
+  }
+  previewPanelHeightInitialized = false;
+
   renderFileList();
 }
 
