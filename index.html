@@ -747,6 +747,24 @@
       .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
       .file-list-container { height: 220px; }
       .preview-panel { height: 440px; }
+
+      /* 모바일에서는 미리보기 패널이 화면 높이의 70%까지 커질 수 있어서(위 JS 로직),
+         병합/다운로드 버튼 등이 그 아래로 멀리 밀려나 스크롤해야만 보이는 문제가
+         있었다. 그래서 버튼 줄만 화면 하단에 고정시켜, 미리보기를 아무리 열어봐도
+         스크롤 없이 항상 눈에 보이도록 한다. */
+      .main-btn-row {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 500;
+        background: #ffffff;
+        margin: 0;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -6px 16px -6px rgba(15,23,42,0.18);
+        border-top: 1px solid #e2e8f0;
+      }
+      /* 고정된 버튼 줄에 안내문구/상태메시지/푸터가 가려지지 않도록,
+         그만큼 아래쪽에 미리 여유 공간을 만들어둔다 */
+      .action-btn-group { padding-bottom: 130px; }
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -765,6 +783,9 @@
       .file-select-box strong { font-size: 14px; }
       .main-btn-row { flex-direction: column; }
       .main-btn-row .btn-main, .main-btn-row .btn-secondary, .main-btn-row .btn-compress { flex: 1 1 auto; }
+      /* 이 폭에서는 버튼 4개가 세로로 쌓이므로(위), 고정 버튼바 자체의 높이가
+         커진다 — 그만큼 아래 여유 공간도 더 넉넉하게 확보한다 */
+      .action-btn-group { padding-bottom: 260px; }
       .file-info { max-width: 55vw; }
       .opt-field { min-width: 90px; }
       .btn-main, .btn-secondary { font-size: 14px; padding: 12px; }
