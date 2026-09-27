@@ -1325,7 +1325,14 @@ async function showPreview(itemData) {
   // (주의 2: .preview-panel은 사용자가 직접 드래그로 크기 조절(resize:vertical)
   //  할 수 있으므로, 파일을 바꿀 때마다 매번 덮어쓰면 사용자가 조절한 크기를
   //  잃어버린다. 그래서 최초 1회만 적용한다.)
-  if (!previewPanelHeightInitialized) {
+  // (주의 3: 이 보정은 "모바일 세로 쌓임" 레이아웃(가로 1180px 이하)에서만
+  //  필요하다. 노트북/모니터 같은 데스크톱 레이아웃(1180px 초과)에서는
+  //  .preview-panel이 이미 CSS(height:100%)로 화면 높이에 맞춰 자동으로
+  //  계산되고 있는데, 여기서 인라인 style로 "창 높이의 70%"를 강제로 덮어써
+  //  버리면 그 값이 병합버튼 줄이 들어갈 공간까지 차지해버려서, 화면이 작은
+  //  노트북에서 병합버튼 줄이 화면 밖으로 밀려나는 원인이 됐다. 그래서
+  //  데스크톱 레이아웃일 때는 이 보정을 아예 건너뛰고 CSS에게 맡긴다.)
+  if (!previewPanelHeightInitialized && window.matchMedia('(max-width: 1180px)').matches) {
     const previewPanelEl = previewBox.closest('.preview-panel');
     if (previewPanelEl) {
       // 모니터(뷰포트) 세로 높이의 약 70%를 미리보기 패널 높이로 사용한다.
