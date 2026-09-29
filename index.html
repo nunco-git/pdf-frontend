@@ -971,6 +971,8 @@
           <a href="https://mail.google.com/mail/?view=cm&fs=1&to=smartgongmaster@gmail.com" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">smartgongmaster@gmail.com</a>
           <span style="color:#cbd5e1;">|</span>
           <span style="color:#64748b;">Copyright &copy; 2026 SmartGong. All Rights Reserved.</span>
+          <span style="color:#cbd5e1;">|</span>
+          <span id="sgVisitors" style="color:#64748b;" title="스마트공 포털 방문자 수">방문자 오늘 <b id="sgVisToday">-</b> · 누적 <b id="sgVisTotal">-</b></span>
         </div>
       </footer>
     </div>
@@ -3185,6 +3187,25 @@ async function mergeFilesCompressed() {
       }
     }, 1500);
   });
+</script>
+<script>
+// 스마트공 포털 방문자 수 표시 (Firestore 공개 읽기 REST 호출 - 별도 라이브러리 없이 숫자만 읽어옵니다)
+(function(){
+  var PID = "visitorcount-7a285", KEY = "AIzaSyAokDpc5E_KyWXTh5oHMcAClOG0fHDBPtA";
+  var base = "https://firestore.googleapis.com/v1/projects/" + PID + "/databases/(default)/documents/visitorStats/";
+  function kst(){ return new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10); }
+  function get(id){
+    return fetch(base + id + "?key=" + KEY).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ var f = j && j.fields && j.fields.visitors; return f ? Number(f.integerValue || f.doubleValue || 0) : 0; });
+  }
+  function put(id, n){ var el = document.getElementById(id); if (el) el.textContent = Number(n||0).toLocaleString("ko-KR"); }
+  function load(){
+    Promise.all([get("day_" + kst()), get("total")]).then(function(v){ put("sgVisToday", v[0]); put("sgVisTotal", v[1]); }).catch(function(){});
+  }
+  load();
+  setTimeout(load, 3000);        // 포털이 방문을 기록한 직후 값을 다시 읽음
+  setInterval(load, 60000);
+})();
 </script>
 </body>
 </html>
