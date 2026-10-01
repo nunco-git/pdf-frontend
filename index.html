@@ -443,7 +443,7 @@
       flex-direction: column;
       align-items: center;
       height: 100%;
-      min-height: 320px;
+      min-height: 510px; /* 기본 세로 크기를 약 5cm(≈190px) 더 키움 */
       max-height: 95vh;
       overflow: auto;
       resize: vertical;
@@ -783,6 +783,10 @@
        지우고 실제 파일 목록으로 교체하므로, 이 안내도 자연히 함께 사라진다. */
     .empty-msg-text { margin-bottom: 6px; font-size: 16px; }
     .promo-tools-title { margin-bottom: 14px; font-size: 13.5px; color: #64748b; font-weight: 600; }
+    /* 파일을 아직 선택/드롭하지 않았을 때, 미리보기 창(우측) 안에 보여주는
+       안내 문구 + 유용한 프로그램 모음. 파일이 선택되면 showPreview()가
+       이 내용을 실제 미리보기로 바로 덮어쓰므로 자연히 사라진다. */
+    .preview-empty-promo { width: 100%; height: 100%; overflow-y: auto; text-align: center; color: #94a3b8; padding: 16px 14px; box-sizing: border-box; }
     .promo-tools { display: flex; flex-direction: column; gap: 8px; text-align: left; }
     .promo-tool-card {
       display: flex;
@@ -824,7 +828,7 @@
       .editor-layout { flex-direction: column; flex-basis: auto; }
       .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
       .file-list-container { height: 220px; }
-      .preview-panel { height: 560px; min-height: 460px; }
+      .preview-panel { height: 750px; min-height: 650px; } /* 기본 세로 크기를 약 5cm(≈190px) 더 키움 */
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -953,8 +957,27 @@
       <div class="editor-layout">
         <div class="file-list-container" id="fileListContainer">
           <div id="fileListItems">
-            <div class="empty-msg">
-              <div class="empty-msg-text">선택된 파일이 없습니다.</div>
+            <div class="empty-msg">선택된 파일이 없습니다.</div>
+          </div>
+        </div>
+
+        <div class="editor-splitter" id="editorSplitter" title="드래그하여 목록/미리보기 폭 조절" role="separator" aria-orientation="vertical"></div>
+
+        <div class="preview-panel">
+          <div class="preview-title-row">
+            <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(가운데 조절창을 드래그하면 폭 조절)</span></div>
+            <div class="preview-zoom-controls">
+              <button type="button" class="zoom-btn" id="preview-zoom-out-btn" title="축소">－</button>
+              <span class="zoom-label" id="preview-zoom-label">100%</span>
+              <button type="button" class="zoom-btn" id="preview-zoom-in-btn" title="확대">＋</button>
+              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-width-btn" title="가로 맞춤">↔ 가로맞춤</button>
+              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-height-btn" title="세로 맞춤">↕ 세로맞춤</button>
+              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fullscreen-btn" title="전체화면으로 크게 보기" onclick="togglePreviewFullscreen()">⛶ 전체화면</button>
+            </div>
+          </div>
+          <div class="preview-box" id="previewBox">
+            <div class="preview-empty-promo">
+              <div class="empty-msg-text">목록에서 파일을<br>클릭하면 표시됩니다.</div>
               <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
               <div class="promo-tools">
                 <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
@@ -983,25 +1006,6 @@
                 </a>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="editor-splitter" id="editorSplitter" title="드래그하여 목록/미리보기 폭 조절" role="separator" aria-orientation="vertical"></div>
-
-        <div class="preview-panel">
-          <div class="preview-title-row">
-            <div class="preview-title">🔍 회전/페이지 미리보기 <span style="font-weight:normal; color:#94a3b8;">(가운데 조절창을 드래그하면 폭 조절)</span></div>
-            <div class="preview-zoom-controls">
-              <button type="button" class="zoom-btn" id="preview-zoom-out-btn" title="축소">－</button>
-              <span class="zoom-label" id="preview-zoom-label">100%</span>
-              <button type="button" class="zoom-btn" id="preview-zoom-in-btn" title="확대">＋</button>
-              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-width-btn" title="가로 맞춤">↔ 가로맞춤</button>
-              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fit-height-btn" title="세로 맞춤">↕ 세로맞춤</button>
-              <button type="button" class="zoom-btn zoom-fit-btn" id="preview-fullscreen-btn" title="전체화면으로 크게 보기" onclick="togglePreviewFullscreen()">⛶ 전체화면</button>
-            </div>
-          </div>
-          <div class="preview-box" id="previewBox">
-            <div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>
           </div>
         </div>
       </div>
@@ -1255,36 +1259,7 @@ function renderFileList() {
 
   if (fileList.length === 0) {
     container.innerHTML = `
-      <div class="empty-msg">
-        <div class="empty-msg-text">선택된 파일이 없습니다.</div>
-        <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
-        <div class="promo-tools">
-          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
-            <span class="promo-tool-icon">🗂️</span>
-            <span class="promo-tool-body">
-              <strong>MiniExplorer</strong>
-              <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램<br>투명도 조정, 복수 실행으로 간편한 파일관리</span>
-            </span>
-            <span class="promo-tool-dl">⬇</span>
-          </a>
-          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/HWP_HWPX_Converter/HWP_HWPX_Converter.exe" download>
-            <span class="promo-tool-icon">📄</span>
-            <span class="promo-tool-body">
-              <strong>Hwp to Hwpx 변환기</strong>
-              <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램<br>폴더 단위로 손쉽게 일괄 변환 가능</span>
-            </span>
-            <span class="promo-tool-dl">⬇</span>
-          </a>
-          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/v1.0/smartgong_splitter.zip" download>
-            <span class="promo-tool-icon">🖥️</span>
-            <span class="promo-tool-body">
-              <strong>모니터 화면 분할기</strong>
-              <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화<br>(특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
-            </span>
-            <span class="promo-tool-dl">⬇</span>
-          </a>
-        </div>
-      </div>
+      <div class="empty-msg">선택된 파일이 없습니다.</div>
     `;
     if (resetBtn) resetBtn.disabled = true;
     if (mergeBtn) mergeBtn.disabled = true;
@@ -1484,7 +1459,38 @@ async function showPreview(itemData) {
   previewBox.classList.remove('pdf-scroll-mode', 'hwpx-text-mode', 'image-fit-width');
 
   if (!itemData) {
-    previewBox.innerHTML = '<div class="preview-placeholder">목록에서 파일을<br>클릭하면 표시됩니다.</div>';
+    previewBox.innerHTML = `
+      <div class="preview-empty-promo">
+        <div class="empty-msg-text">목록에서 파일을<br>클릭하면 표시됩니다.</div>
+        <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
+        <div class="promo-tools">
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
+            <span class="promo-tool-icon">🗂️</span>
+            <span class="promo-tool-body">
+              <strong>MiniExplorer</strong>
+              <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램<br>투명도 조정, 복수 실행으로 간편한 파일관리</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/HWP_HWPX_Converter/HWP_HWPX_Converter.exe" download>
+            <span class="promo-tool-icon">📄</span>
+            <span class="promo-tool-body">
+              <strong>Hwp to Hwpx 변환기</strong>
+              <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램<br>폴더 단위로 손쉽게 일괄 변환 가능</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/v1.0/smartgong_splitter.zip" download>
+            <span class="promo-tool-icon">🖥️</span>
+            <span class="promo-tool-body">
+              <strong>모니터 화면 분할기</strong>
+              <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화<br>(특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+        </div>
+      </div>
+    `;
     return;
   }
 
@@ -1515,7 +1521,7 @@ async function showPreview(itemData) {
       // 다만 화면이 아주 작은 경우를 대비해 최소 460px은 보장한다.
       // (사용자가 preview-panel을 resize:vertical로 직접 드래그해 세로 길이를
       //  추가로 조절할 수도 있다 — 이 초기값은 어디까지나 "보기 좋은 기본값".)
-      const stableHeight = Math.max(window.innerHeight * 0.82, 460);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 650);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
@@ -2918,7 +2924,7 @@ async function splitPdfByPage() {
     if (!mobileLayoutQuery.matches) return; // 데스크톱은 사용자의 수동 크기조절을 존중
     const previewPanelEl = document.querySelector('.preview-panel');
     if (previewPanelEl && !previewPanelEl.classList.contains('is-fullscreen')) {
-      const stableHeight = Math.max(window.innerHeight * 0.82, 460);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 650);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
