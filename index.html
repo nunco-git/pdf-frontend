@@ -781,13 +781,14 @@
     /* 목록이 비어있을 때(파일을 아직 안 놓았을 때)만 보이는 다른 프로그램 안내.
        .empty-msg는 파일을 하나라도 추가하면 renderFileList()가 통째로
        지우고 실제 파일 목록으로 교체하므로, 이 안내도 자연히 함께 사라진다. */
-    .empty-msg-text { margin-bottom: 14px; }
+    .empty-msg-text { margin-bottom: 6px; font-size: 16px; }
+    .promo-tools-title { margin-bottom: 14px; font-size: 13.5px; color: #64748b; font-weight: 600; }
     .promo-tools { display: flex; flex-direction: column; gap: 8px; text-align: left; }
     .promo-tool-card {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
+      gap: 10px;
+      padding: 10px 12px;
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -796,11 +797,24 @@
       transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
     }
     .promo-tool-card:hover { border-color: #93c5fd; box-shadow: 0 4px 10px rgba(37,99,235,0.1); transform: translateY(-1px); }
-    .promo-tool-icon { font-size: 18px; flex-shrink: 0; }
-    .promo-tool-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .promo-tool-body strong { font-size: 12.5px; color: #1e293b; }
-    .promo-tool-desc { font-size: 11px; color: #64748b; line-height: 1.35; white-space: normal; }
-    .promo-tool-dl { margin-left: auto; font-size: 13px; color: #2563eb; flex-shrink: 0; }
+    .promo-tool-icon { font-size: 22px; flex-shrink: 0; }
+    .promo-tool-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .promo-tool-body strong { font-size: 15px; color: #1e293b; }
+    .promo-tool-desc { font-size: 13px; color: #64748b; line-height: 1.4; white-space: normal; }
+    .promo-tool-dl { margin-left: auto; font-size: 16px; color: #2563eb; flex-shrink: 0; }
+    /* 프로그램 다운로드 전 안내 팝업 */
+    .promo-confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
+    .promo-confirm-overlay.is-open { display: flex; }
+    .promo-confirm-box { background: #fff; border-radius: 14px; padding: 28px 24px 22px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
+    .promo-confirm-icon { font-size: 32px; margin-bottom: 10px; }
+    .promo-confirm-msg { font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 14px; }
+    .promo-confirm-question { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
+    .promo-confirm-actions { display: flex; gap: 10px; }
+    .promo-confirm-actions button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; }
+    .promo-confirm-cancel { background: #fff; border-color: #cbd5e1; color: #475569; }
+    .promo-confirm-cancel:hover { background: #f1f5f9; }
+    .promo-confirm-ok { background: #2563eb; color: #fff; }
+    .promo-confirm-ok:hover { background: #1d4ed8; }
 
     @media (max-width: 1180px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
@@ -941,12 +955,13 @@
           <div id="fileListItems">
             <div class="empty-msg">
               <div class="empty-msg-text">선택된 파일이 없습니다.</div>
+              <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
               <div class="promo-tools">
                 <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
                   <span class="promo-tool-icon">🗂️</span>
                   <span class="promo-tool-body">
                     <strong>MiniExplorer</strong>
-                    <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램</span>
+                    <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램<br>투명도 조정, 복수 실행으로 간편한 파일관리</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
@@ -954,7 +969,7 @@
                   <span class="promo-tool-icon">📄</span>
                   <span class="promo-tool-body">
                     <strong>Hwp to Hwpx 변환기</strong>
-                    <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램</span>
+                    <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램<br>폴더 단위로 손쉽게 일괄 변환 가능</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
@@ -962,7 +977,7 @@
                   <span class="promo-tool-icon">🖥️</span>
                   <span class="promo-tool-body">
                     <strong>모니터 화면 분할기</strong>
-                    <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화 (특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
+                    <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화<br>(특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
@@ -1034,6 +1049,72 @@
       </footer>
     </div>
   </div>
+
+  <div class="promo-confirm-overlay" id="promoConfirmOverlay">
+    <div class="promo-confirm-box" role="dialog" aria-modal="true" aria-labelledby="promoConfirmQuestion">
+      <div class="promo-confirm-icon">⚠️</div>
+      <div class="promo-confirm-msg">만일을 위해 공공기관에서 사용할 때는 보안 담당자에게 사용상 문제소지가 없는지 확인 후 사용하세요.</div>
+      <div class="promo-confirm-question" id="promoConfirmQuestion">다운받으시겠습니까?</div>
+      <div class="promo-confirm-actions">
+        <button type="button" class="promo-confirm-cancel" id="promoConfirmCancel">취소</button>
+        <button type="button" class="promo-confirm-ok" id="promoConfirmOk">다운로드</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // 유용한 프로그램 모음 카드를 클릭하면 바로 다운로드하지 않고,
+  // 공공기관 보안 확인 안내 팝업을 먼저 띄운 뒤 "다운로드" 선택 시에만 실제로 내려받는다.
+  (function () {
+    var overlay = document.getElementById('promoConfirmOverlay');
+    var okBtn = document.getElementById('promoConfirmOk');
+    var cancelBtn = document.getElementById('promoConfirmCancel');
+    var pendingUrl = null;
+    var pendingName = null;
+
+    function openPromoConfirm(url, filename) {
+      pendingUrl = url;
+      pendingName = filename || '';
+      if (overlay) overlay.classList.add('is-open');
+    }
+    function closePromoConfirm() {
+      if (overlay) overlay.classList.remove('is-open');
+      pendingUrl = null;
+      pendingName = null;
+    }
+
+    document.addEventListener('click', function (e) {
+      var card = e.target.closest ? e.target.closest('.promo-tool-card') : null;
+      if (!card) return;
+      e.preventDefault();
+      openPromoConfirm(card.getAttribute('href'), card.getAttribute('download'));
+    });
+
+    if (okBtn) {
+      okBtn.addEventListener('click', function () {
+        if (pendingUrl) {
+          var a = document.createElement('a');
+          a.href = pendingUrl;
+          a.download = pendingName || '';
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+        closePromoConfirm();
+      });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', closePromoConfirm);
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closePromoConfirm();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closePromoConfirm();
+    });
+  })();
+  </script>
 
   <script>
   // XSS 방지용: 업로드된 파일명을 화면(innerHTML)에 표시하기 전에 이스케이프 처리
@@ -1176,12 +1257,13 @@ function renderFileList() {
     container.innerHTML = `
       <div class="empty-msg">
         <div class="empty-msg-text">선택된 파일이 없습니다.</div>
+        <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
         <div class="promo-tools">
           <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
             <span class="promo-tool-icon">🗂️</span>
             <span class="promo-tool-body">
               <strong>MiniExplorer</strong>
-              <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램</span>
+              <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램<br>투명도 조정, 복수 실행으로 간편한 파일관리</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
@@ -1189,7 +1271,7 @@ function renderFileList() {
             <span class="promo-tool-icon">📄</span>
             <span class="promo-tool-body">
               <strong>Hwp to Hwpx 변환기</strong>
-              <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램</span>
+              <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램<br>폴더 단위로 손쉽게 일괄 변환 가능</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
@@ -1197,7 +1279,7 @@ function renderFileList() {
             <span class="promo-tool-icon">🖥️</span>
             <span class="promo-tool-body">
               <strong>모니터 화면 분할기</strong>
-              <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화 (특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
+              <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화<br>(특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
