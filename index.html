@@ -777,7 +777,30 @@
     .btn-reset:hover { background: #ef4444; color: white; }
     .btn-reset:disabled { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; background: white; }
     #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
-    .empty-msg { color: #94a3b8; text-align: center; margin-top: 120px; font-size: 15px; }
+    .empty-msg { color: #94a3b8; text-align: center; margin-top: 24px; font-size: 15px; padding-bottom: 10px; }
+    /* 목록이 비어있을 때(파일을 아직 안 놓았을 때)만 보이는 다른 프로그램 안내.
+       .empty-msg는 파일을 하나라도 추가하면 renderFileList()가 통째로
+       지우고 실제 파일 목록으로 교체하므로, 이 안내도 자연히 함께 사라진다. */
+    .empty-msg-text { margin-bottom: 14px; }
+    .promo-tools { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+    .promo-tool-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+    }
+    .promo-tool-card:hover { border-color: #93c5fd; box-shadow: 0 4px 10px rgba(37,99,235,0.1); transform: translateY(-1px); }
+    .promo-tool-icon { font-size: 18px; flex-shrink: 0; }
+    .promo-tool-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .promo-tool-body strong { font-size: 12.5px; color: #1e293b; }
+    .promo-tool-desc { font-size: 11px; color: #64748b; line-height: 1.35; white-space: normal; }
+    .promo-tool-dl { margin-left: auto; font-size: 13px; color: #2563eb; flex-shrink: 0; }
 
     @media (max-width: 1180px) {
       .app-container { display: flex; flex-direction: column; align-items: center; }
@@ -916,7 +939,35 @@
       <div class="editor-layout">
         <div class="file-list-container" id="fileListContainer">
           <div id="fileListItems">
-            <div class="empty-msg">선택된 파일이 없습니다.</div>
+            <div class="empty-msg">
+              <div class="empty-msg-text">선택된 파일이 없습니다.</div>
+              <div class="promo-tools">
+                <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
+                  <span class="promo-tool-icon">🗂️</span>
+                  <span class="promo-tool-body">
+                    <strong>MiniExplorer</strong>
+                    <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램</span>
+                  </span>
+                  <span class="promo-tool-dl">⬇</span>
+                </a>
+                <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/HWP_HWPX_Converter/HWP_HWPX_Converter.exe" download>
+                  <span class="promo-tool-icon">📄</span>
+                  <span class="promo-tool-body">
+                    <strong>Hwp to Hwpx 변환기</strong>
+                    <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램</span>
+                  </span>
+                  <span class="promo-tool-dl">⬇</span>
+                </a>
+                <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/v1.0/smartgong_splitter.zip" download>
+                  <span class="promo-tool-icon">🖥️</span>
+                  <span class="promo-tool-body">
+                    <strong>모니터 화면 분할기</strong>
+                    <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화 (특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
+                  </span>
+                  <span class="promo-tool-dl">⬇</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1122,7 +1173,37 @@ function renderFileList() {
   container.innerHTML = '';
 
   if (fileList.length === 0) {
-    container.innerHTML = '<div class="empty-msg">선택된 파일이 없습니다.</div>';
+    container.innerHTML = `
+      <div class="empty-msg">
+        <div class="empty-msg-text">선택된 파일이 없습니다.</div>
+        <div class="promo-tools">
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
+            <span class="promo-tool-icon">🗂️</span>
+            <span class="promo-tool-body">
+              <strong>MiniExplorer</strong>
+              <span class="promo-tool-desc">오늘 다운받은 파일만 간단하게 보여주는 탐색기 프로그램</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/HWP_HWPX_Converter/HWP_HWPX_Converter.exe" download>
+            <span class="promo-tool-icon">📄</span>
+            <span class="promo-tool-body">
+              <strong>Hwp to Hwpx 변환기</strong>
+              <span class="promo-tool-desc">공문에 첨부가 안되는 hwp 파일을 hwpx 파일로 일괄 변환 프로그램</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/v1.0/smartgong_splitter.zip" download>
+            <span class="promo-tool-icon">🖥️</span>
+            <span class="promo-tool-body">
+              <strong>모니터 화면 분할기</strong>
+              <span class="promo-tool-desc">모니터를 2~3개로 나눠서 업무 효율 극대화 (특정 프로그램이 특정 창에서만 실행되게 고정 가능)</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+        </div>
+      </div>
+    `;
     if (resetBtn) resetBtn.disabled = true;
     if (mergeBtn) mergeBtn.disabled = true;
     if (imgHighBtn) imgHighBtn.disabled = true;
