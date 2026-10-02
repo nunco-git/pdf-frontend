@@ -358,7 +358,7 @@
       border-radius: 10px;
       background: #fafafa;
       height: 100%;
-      min-height: 200px;
+      min-height: 420px; /* 우측 미리보기 창과 높이를 동일하게 맞춤 */
       max-height: 90vh;
       overflow: auto;
       padding: 10px;
@@ -443,7 +443,7 @@
       flex-direction: column;
       align-items: center;
       height: 100%;
-      min-height: 510px; /* 기본 세로 크기를 약 5cm(≈190px) 더 키움 */
+      min-height: 420px; /* 병합버튼 줄이 가려지지 않는 선에서 기본보다 좀 더 크게 */
       max-height: 95vh;
       overflow: auto;
       resize: vertical;
@@ -514,7 +514,7 @@
       width: 100%;
       flex: 1 1 0%;
       min-height: 0;
-      background: #e2e8f0;
+      background: #fafafa; /* 좌측 파일목록 창과 동일한 밝은 배경으로 통일 */
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -755,6 +755,7 @@
       flex-wrap: wrap;
       gap: 10px;
       align-items: stretch;
+      margin-top: 16px; /* 목록/미리보기 영역과의 간격을 좀 더 둬서 아래쪽으로 내림 */
     }
     .main-btn-row .btn-main { flex: 4 1 200px; width: auto; font-size: 15.5px; padding: 12px 10px; }
     .main-btn-row .btn-secondary { flex: 2 1 140px; width: auto; }
@@ -776,7 +777,7 @@
     .btn-reset { padding: 5px 14px; background: white; border: 1.5px solid #ef4444; color: #ef4444; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
     .btn-reset:hover { background: #ef4444; color: white; }
     .btn-reset:disabled { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; background: white; }
-    #status { margin-top: 18px; text-align: center; font-size: 16px; font-weight: bold; }
+    #status { margin-top: 6px; text-align: center; font-size: 16px; font-weight: bold; }
     .empty-msg { color: #94a3b8; text-align: center; margin-top: 24px; font-size: 15px; padding-bottom: 10px; }
     /* 목록이 비어있을 때(파일을 아직 안 놓았을 때)만 보이는 다른 프로그램 안내.
        .empty-msg는 파일을 하나라도 추가하면 renderFileList()가 통째로
@@ -787,7 +788,10 @@
        안내 문구 + 유용한 프로그램 모음. 파일이 선택되면 showPreview()가
        이 내용을 실제 미리보기로 바로 덮어쓰므로 자연히 사라진다. */
     .preview-empty-promo { width: 100%; height: 100%; overflow-y: auto; text-align: center; color: #94a3b8; padding: 16px 14px; box-sizing: border-box; }
-    .promo-tools { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+    .promo-tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; text-align: left; }
+    @media (max-width: 480px) {
+      .promo-tools { grid-template-columns: 1fr; }
+    }
     .promo-tool-card {
       display: flex;
       align-items: center;
@@ -827,8 +831,7 @@
       .top-col-title, .top-col-guide, .top-col-drop { flex-basis: auto; width: 100%; min-width: 0; }
       .editor-layout { flex-direction: column; flex-basis: auto; }
       .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
-      .file-list-container { height: 220px; }
-      .preview-panel { height: 750px; min-height: 650px; } /* 기본 세로 크기를 약 5cm(≈190px) 더 키움 */
+      .file-list-container, .preview-panel { height: 540px; min-height: 480px; } /* 목록창과 미리보기 창의 높이를 동일하게 맞춤 */
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -1026,7 +1029,7 @@
       </div>
       <div id="status"></div>
 
-      <footer style="width:100%; margin-top:24px; padding-top:20px; border-top:1px solid #e2e8f0; font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;">
+      <footer style="width:100%; margin-top:8px; padding-top:10px; border-top:1px solid #e2e8f0; font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; font-size:15px; color:#94a3b8;">
           <a href="https://smartgong.kr/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; color:#0f172a; text-decoration:none; font-weight:800; font-size:16px;">
             <img src="smartgong_logo_icon.png" alt="스마트공" style="height:34px; width:auto;">
@@ -1521,7 +1524,7 @@ async function showPreview(itemData) {
       // 다만 화면이 아주 작은 경우를 대비해 최소 460px은 보장한다.
       // (사용자가 preview-panel을 resize:vertical로 직접 드래그해 세로 길이를
       //  추가로 조절할 수도 있다 — 이 초기값은 어디까지나 "보기 좋은 기본값".)
-      const stableHeight = Math.max(window.innerHeight * 0.82, 650);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 480);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
@@ -2924,7 +2927,7 @@ async function splitPdfByPage() {
     if (!mobileLayoutQuery.matches) return; // 데스크톱은 사용자의 수동 크기조절을 존중
     const previewPanelEl = document.querySelector('.preview-panel');
     if (previewPanelEl && !previewPanelEl.classList.contains('is-fullscreen')) {
-      const stableHeight = Math.max(window.innerHeight * 0.82, 650);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 480);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
