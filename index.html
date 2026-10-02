@@ -358,7 +358,7 @@
       border-radius: 10px;
       background: #fafafa;
       height: 100%;
-      min-height: 420px; /* 우측 미리보기 창과 높이를 동일하게 맞춤 */
+      min-height: 220px; /* 최소 보장값일 뿐, 실제 높이는 flex가 화면(모니터) 크기에 맞춰 자동 계산 */
       max-height: 90vh;
       overflow: auto;
       padding: 10px;
@@ -443,7 +443,7 @@
       flex-direction: column;
       align-items: center;
       height: 100%;
-      min-height: 420px; /* 병합버튼 줄이 가려지지 않는 선에서 기본보다 좀 더 크게 */
+      min-height: 220px; /* 최소 보장값일 뿐, 실제 높이는 flex가 화면(모니터) 크기에 맞춰 자동 계산 */
       max-height: 95vh;
       overflow: auto;
       resize: vertical;
@@ -730,17 +730,6 @@
     .btn-main:disabled { background-color: #cbd5e1; cursor: not-allowed; }
 
     .action-btn-group { display: flex; flex-direction: column; gap: 10px; }
-    .output-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .output-name-row label { font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap; flex-shrink: 0; }
-    .output-name-row input {
-      flex: 0 0 30%;
-      min-width: 120px;
-      padding: 8px 10px;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 13.5px;
-    }
-    .output-name-row input:focus { outline: none; border-color: #2563eb; }
     /* 버튼 4개(병합, 최대압축, 이미지 고화질/저화질)를 한 줄에 배치.
        공간이 부족한 중간 너비에서는 flex-wrap으로 자연스럽게 2줄로
        접히고(줄바꿈), 실제 폰 폭(480px 이하)에서는 아래 미디어쿼리에서
@@ -831,7 +820,10 @@
       .top-col-title, .top-col-guide, .top-col-drop { flex-basis: auto; width: 100%; min-width: 0; }
       .editor-layout { flex-direction: column; flex-basis: auto; }
       .file-list-container, .preview-panel { flex-basis: auto; width: 100%; max-width: 100%; min-width: 0; }
-      .file-list-container, .preview-panel { height: 540px; min-height: 480px; } /* 목록창과 미리보기 창의 높이를 동일하게 맞춤 */
+      /* 고정 px 대신 화면 세로 높이(vh)에 비례해서 잡아, 기기/모니터 화면
+         크기에 따라 자동으로 커지거나 작아지게 한다 (너무 작은 화면에서도
+         최소 220px는 보장, 너무 큰 화면에서 과도하게 커지지 않도록 620px로 제한). */
+      .file-list-container, .preview-panel { height: 46vh; min-height: 220px; max-height: 620px; }
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -890,7 +882,7 @@
       .file-select-box strong { font-size: 13.5px; line-height: 1.35; }
       .file-list-container, .preview-panel { min-height: 140px; }
       .action-btn-group { gap: 6px; }
-      .output-name-row input, .main-btn-row .btn-main, .main-btn-row .btn-secondary,
+      .main-btn-row .btn-main, .main-btn-row .btn-secondary,
       .main-btn-row .btn-compress, .main-btn-row .btn-split, .btn-secondary { padding: 9px; font-size: 13.5px; }
       #status { margin-top: 8px; }
       footer { margin-top: 12px !important; padding-top: 10px !important; }
@@ -1014,10 +1006,6 @@
       </div>
 
       <div class="action-btn-group">
-        <div class="output-name-row">
-          <label for="outputNameInput">병합파일 이름</label>
-          <input type="text" id="outputNameInput" placeholder="미입력 시 자동 생성 (예: 1번파일명_병합파일.pdf)" />
-        </div>
         <div class="main-btn-row">
           <button class="btn-main" id="merge-btn" onclick="mergeFiles()" disabled>PDF 변환 및 병합하여 다운로드</button>
           <button class="btn-compress" id="compress-btn" onclick="mergeFilesCompressed()" disabled>🗜️ 최대 압축 병합</button>
@@ -1524,7 +1512,7 @@ async function showPreview(itemData) {
       // 다만 화면이 아주 작은 경우를 대비해 최소 460px은 보장한다.
       // (사용자가 preview-panel을 resize:vertical로 직접 드래그해 세로 길이를
       //  추가로 조절할 수도 있다 — 이 초기값은 어디까지나 "보기 좋은 기본값".)
-      const stableHeight = Math.max(window.innerHeight * 0.82, 480);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 220);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
@@ -2927,7 +2915,7 @@ async function splitPdfByPage() {
     if (!mobileLayoutQuery.matches) return; // 데스크톱은 사용자의 수동 크기조절을 존중
     const previewPanelEl = document.querySelector('.preview-panel');
     if (previewPanelEl && !previewPanelEl.classList.contains('is-fullscreen')) {
-      const stableHeight = Math.max(window.innerHeight * 0.82, 480);
+      const stableHeight = Math.max(window.innerHeight * 0.82, 220);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
