@@ -3194,7 +3194,7 @@ async function splitPdfByPage() {
   let previewZoom = 1;
   // previewFitMode는 이 스크립트(즉시실행함수) 바깥의 showPreview/renderPdfPage에서도
   // 읽어야 하므로, 지역 변수가 아니라 window 프로퍼티로 선언해 전역에서 접근 가능하게 한다.
-  window.previewFitMode = 'height'; // 'height'(세로 맞춤, 기본값) 또는 'width'(가로 맞춤)
+  window.previewFitMode = 'width'; // 'width'(가로 맞춤, 기본값) 또는 'height'(세로 맞춤)
 
   function applyPreviewZoom() {
     const box = document.getElementById('previewBox');
