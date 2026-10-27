@@ -99,6 +99,8 @@
   <!-- 워드(docx) 미리보기용 mammoth.js: docx의 XML 구조를 읽어 HTML로 변환해 화면에 그린다.
        (옛 이진 형식인 .doc는 mammoth가 지원하지 않아 미리보기 대상에서 제외됨) -->
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.1/mammoth.browser.min.js" integrity="sha256-eK/B970IeSNwEQy1SUbqSK22SzWtIfYSbSHy2OANOgA=" crossorigin="anonymous"></script>
+  <!-- 암호가 걸린 엑셀(.xlsx) 해독용 암호화 라이브러리 (엑셀 병합기와 동일) -->
+  <script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js" integrity="sha384-xE6n3RBMZWgwAhyzoIMfY7HN3oDBa/+HBwFFNyxsdY8kseup7C4Blx1yDzprEESV" crossorigin="anonymous"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -406,6 +408,7 @@
     .drag-handle { color: #94a3b8; margin-right: 2px; font-size: 14px; cursor: grab; }
     .badge { background: #3b82f6; color: white; font-weight: bold; font-size: 12px; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
     .badge-img { background: #f59e0b; }
+    .badge-approx { background: #8b5cf6; font-size: 11px; }
 
     .file-opt-row {
       display: flex;
@@ -911,6 +914,12 @@
     @media (min-width: 481px) and (max-width: 1000px) {
       .main-btn-row .btn-main { flex-basis: 100%; }
     }
+    /* 암호가 걸린 엑셀 파일의 목록 내 암호 입력줄 */
+    .excel-pw-row { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 6px 8px; border-top: 1px solid #fed7aa; }
+    .excel-pw-row input { user-select: text; -webkit-user-select: text; }
+    .excel-pw-msg { font-size: 12px; font-weight: 700; flex-basis: 100%; }
+    .excel-pw-msg.ok { color: #16a34a; }
+    .excel-pw-msg.err { color: #dc2626; }
   </style>
 </head>
 <body>
@@ -933,7 +942,7 @@
             </div>
             <ul class="security-features">
               <li><span class="feat-icon">🌐</span><span><strong>외부 서버 전송 ZERO</strong> <span class="feat-desc">: 오프라인으로 브라우저 안에서만 처리</span></span></li>
-              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 가능</strong> <span class="feat-desc">: 회전, 페이지 추출가능(HWPX,엑셀,워드 파일은 미리보기만 가능)</span></span></li>
+              <li><span class="feat-icon">👁️</span><span><strong>PDF·이미지 미리보기·병합 가능</strong> <span class="feat-desc">: 회전, 페이지 추출가능(HWPX,엑셀,워드는 화면 모양 그대로 이미지로 바꿔 근사 병합)</span></span></li>
               <li><span class="feat-icon">🗜️</span><span><strong>압축파일 자동인식 및 미리보기</strong> <span class="feat-desc">: 압축파일(ZIP파일)도 미리보기 가능</span></span></li>
             </ul>
           </div>
@@ -943,7 +952,7 @@
           <div class="file-select-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <span class="drop-icon">📂</span>
             <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
-            <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX, 엑셀·워드(.docx) 파일은 미리보기만 가능)</span>
+            <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX·엑셀·워드(.docx)는 미리보기 + 근사 변환 병합 가능)</span>
             <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
@@ -1022,6 +1031,7 @@
           <button class="btn-secondary" id="img-low-btn" onclick="exportAsImages('low')" disabled>🖼️ 이미지 변환 (저화질)</button>
         </div>
         <div class="compress-note">최대 압축 병합: 모든 페이지를 저해상도 이미지로 다시 찍어 압축합니다 — 글자를 선택·검색할 수 없게 됩니다.</div>
+        <div class="compress-note" style="color:#7c3aed;">HWPX·엑셀·워드(근사변환 표시 파일): 화면 모양을 이미지로 바꿔 병합하므로 글자 선택·검색이 안 되고 원본과 줄바꿈·쪽 수가 다를 수 있습니다. 정확한 문서는 PDF로 저장해서 올려주세요.</div>
       </div>
       <div id="status"></div>
 
@@ -1322,6 +1332,7 @@ function renderFileList() {
             <div class="file-info">
               <span class="drag-handle">☰</span>
               <span class="${isImage ? 'badge badge-img' : 'badge'}">${index + 1}</span>
+              ${(kind === 'hwpx' || kind === 'excel' || kind === 'docx') ? '<span class="badge badge-approx" title="화면 모양 그대로 이미지로 변환되어 병합됩니다(근사 변환). 글자 선택·검색 불가, 원본과 줄바꿈·쪽 수가 다를 수 있습니다.">근사변환</span>' : ''}
               <span title="${__escFileName(file.name)}">${__escFileName(file.name)}</span>
             </div>
             <div class="btn-group">
@@ -1329,6 +1340,15 @@ function renderFileList() {
               <button class="btn-sm btn-del" onclick="removeItem(${index}, event)">✕</button>
             </div>
           </div>
+          ${(kind === 'excel' && itemData.needsPassword) ? `
+          <div class="file-opt-row excel-pw-row">
+            <div class="opt-field" style="flex:3;">
+              <label>🔒 엑셀 암호:</label>
+              <input type="password" placeholder="암호 입력 후 Enter" value="${__escFileName(itemData.password || '')}" oninput="setExcelPassword(${index}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();applyExcelPassword(${index});}" />
+            </div>
+            <button class="btn-sm btn-open" onclick="applyExcelPassword(${index}, event)">적용</button>
+            <span class="excel-pw-msg ${itemData.pwOk ? 'ok' : 'err'}">${itemData.pwMsg ? __escFileName(itemData.pwMsg) : ''}</span>
+          </div>` : ''}
           <div class="file-opt-row">
             ${!isImage ? `
               <div class="opt-field">
@@ -2138,11 +2158,15 @@ async function mergeFiles() {
           });
         }
       } else if (kind === 'image') {
-        const pngBytes = await convertImageToPngBytes(file);
-        const embeddedImg = await mergedPdf.embedPng(pngBytes);
-        const page = mergedPdf.addPage([595.28, 841.89]);
+        // 문서 변환 페이지(JPEG)는 다시 PNG로 바꾸지 않고 그대로 넣어 용량을 줄인다
+        const embeddedImg = itemData.isDocPage
+          ? await mergedPdf.embedJpg(new Uint8Array(await file.arrayBuffer()))
+          : await mergedPdf.embedPng(await convertImageToPngBytes(file));
+        const __docLand = !!itemData.isDocPage && embeddedImg.width > embeddedImg.height;
+        const page = mergedPdf.addPage(__docLand ? [841.89, 595.28] : [595.28, 841.89]);
         const { width, height } = page.getSize();
-        const imgDims = embeddedImg.scaleToFit(width - 40, height - 40);
+        const __m = itemData.isDocPage ? 0 : 40; // 문서 페이지 이미지는 자체 여백이 있으므로 추가 여백 없음
+        const imgDims = embeddedImg.scaleToFit(width - __m, height - __m);
         if (itemData.rotation !== 0) {
           page.setRotation(PDFLib.degrees(itemData.rotation));
         }
@@ -2331,7 +2355,7 @@ async function mergeFilesCompressed() {
       const kind = itemData.kind || getFileKind(file);
 
       if (kind === 'image') {
-        jobs.push({ type: 'image', file, rotation: itemData.rotation || 0 });
+        jobs.push({ type: 'image', file, rotation: itemData.rotation || 0, isDocPage: !!itemData.isDocPage });
       } else if (kind === 'pdf') {
         const fileBytes = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: fileBytes }).promise;
@@ -2384,7 +2408,7 @@ async function mergeFilesCompressed() {
         const swap = (job.rotation === 90 || job.rotation === 270);
         const naturalW = swap ? img.height : img.width;
         const naturalH = swap ? img.width : img.height;
-        const scaleDown = Math.min(1, maxImageDim / Math.max(naturalW, naturalH));
+        const scaleDown = Math.min(1, (job.isDocPage ? 1700 : maxImageDim) / Math.max(naturalW, naturalH));
         const outW = Math.max(1, Math.round(naturalW * scaleDown));
         const outH = Math.max(1, Math.round(naturalH * scaleDown));
 
@@ -2399,9 +2423,11 @@ async function mergeFilesCompressed() {
 
         const jpegBytes = await canvasToJpegBytes(canvas);
         const embedded = await mergedPdf.embedJpg(jpegBytes);
-        const outPage = mergedPdf.addPage([595.28, 841.89]); // A4
+        const __docLand = !!job.isDocPage && embedded.width > embedded.height;
+        const outPage = mergedPdf.addPage(__docLand ? [841.89, 595.28] : [595.28, 841.89]); // A4
         const { width, height } = outPage.getSize();
-        const imgDims = embedded.scaleToFit(width - 40, height - 40);
+        const __m = job.isDocPage ? 0 : 40;
+        const imgDims = embedded.scaleToFit(width - __m, height - __m);
         outPage.drawImage(embedded, {
           x: (width - imgDims.width) / 2,
           y: (height - imgDims.height) / 2,
@@ -2622,55 +2648,228 @@ async function splitPdfByPage() {
     console.error(EXCEL_LOG_PREFIX, 'getFileKind 함수를 찾지 못해 엑셀 인식을 추가하지 못했습니다.');
   }
 
-  // 비밀번호로 보호된 엑셀 파일: XLSX.read()가 실패했을 때, 실패 이유가
-  // "암호 보호"로 보이면 비밀번호 입력창을 보여주고, 입력받은 비밀번호로
-  // 다시 시도한다(모두 브라우저 안에서만 처리되고 서버로는 전송되지 않음).
-  function looksLikeEncryptedExcelError(err) {
-    const msg = ((err && err.message) || '').toLowerCase();
-    return /password|protect|encrypt|암호|보호/.test(msg);
+  // ============================================================
+  // 암호가 걸린 엑셀(.xlsx) 해독 — 엑셀 병합기와 같은 방식
+  // (MS-OFFCRYPTO Agile Encryption: 엑셀 2010 이후 "암호 설정"으로 저장한 파일)
+  // 모든 계산은 브라우저 안에서만 이뤄지며 서버로 전송되지 않는다.
+  // ============================================================
+  const AGILE_BLOCK_KEYS = {
+    key:           Uint8Array.from([0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6]),
+    verifierInput: Uint8Array.from([0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79]),
+    verifierValue: Uint8Array.from([0xd7, 0xaa, 0x0f, 0x6d, 0x30, 0x61, 0x34, 0x4e])
+  };
+
+  function u8ToBin(u8) {
+    let s = '';
+    for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return s;
   }
-
-  function showExcelPasswordPrompt(file, box, errorText) {
-    box.classList.add('excel-mode');
-    box.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'preview-placeholder excel-password-prompt';
-    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px;';
-    wrap.innerHTML = `
-      <div>🔒 비밀번호로 보호된 엑셀 파일입니다.<br>암호를 입력하면 브라우저 안에서 바로 풀어서 미리 볼 수 있습니다.</div>
-      <div style="display:flex; gap:6px; margin-top:6px;">
-        <input type="password" class="excel-pw-input" placeholder="비밀번호 입력" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
-        <button type="button" class="excel-pw-submit-btn" style="padding:6px 14px; border:none; border-radius:6px; background:#ea580c; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">확인</button>
-      </div>
-      <div class="excel-pw-error" style="color:#dc2626; font-size:12px; min-height:16px;"></div>
-    `;
-    box.appendChild(wrap);
-    const input = wrap.querySelector('.excel-pw-input');
-    const submitBtn = wrap.querySelector('.excel-pw-submit-btn');
-    const errorEl = wrap.querySelector('.excel-pw-error');
-    if (errorText) errorEl.textContent = errorText;
-    input.focus();
-
-    function submit() {
-      const pw = input.value;
-      if (!pw) { errorEl.textContent = '비밀번호를 입력해 주세요.'; return; }
-      showExcelPreview(file, box, pw);
+  function binToU8(s) {
+    const u8 = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+    return u8;
+  }
+  function b64ToU8(b64) { return binToU8(atob(b64)); }
+  function u32le(n) {
+    return Uint8Array.from([n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff]);
+  }
+  function pwUtf16le(pw) {
+    const out = new Uint8Array(pw.length * 2);
+    for (let i = 0; i < pw.length; i++) {
+      const c = pw.charCodeAt(i);
+      out[i * 2] = c & 0xff;
+      out[i * 2 + 1] = c >> 8;
     }
-    submitBtn.onclick = submit;
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    return out;
+  }
+  function hashConcat(alg, parts) {
+    const k = String(alg).toLowerCase();
+    if (!forge.md[k]) throw new Error('UNSUPPORTED_ENCRYPTION');
+    const md = forge.md[k].create();
+    parts.forEach((p) => md.update(u8ToBin(p)));
+    return binToU8(md.digest().getBytes());
+  }
+  function aesCbcDecryptNoPad(key, iv, data) {
+    const d = forge.cipher.createDecipher('AES-CBC', u8ToBin(key));
+    d.start({ iv: u8ToBin(iv) });
+    d.update(forge.util.createBuffer(u8ToBin(data)));
+    d.finish(() => true); // 패딩 검사 생략(엑셀은 블록 크기만 맞추고 실제 길이는 따로 기록)
+    return binToU8(d.output.getBytes());
+  }
+  function fitLength(h, n) {
+    if (h.length === n) return h;
+    if (h.length > n) return h.slice(0, n);
+    const padded = new Uint8Array(n).fill(0x36);
+    padded.set(h);
+    return padded;
+  }
+  function spinHash(password, alg, salt, spinCount) {
+    let h = hashConcat(alg, [salt, pwUtf16le(password)]);
+    for (let i = 0; i < spinCount; i++) h = hashConcat(alg, [u32le(i), h]);
+    return h;
+  }
+  function deriveKey(spin, alg, keyBits, blockKey) {
+    return fitLength(hashConcat(alg, [spin, blockKey]), keyBits / 8);
   }
 
-  async function showExcelPreview(file, box, passwordOverride) {
+  // 엑셀이 "암호로 암호화"한 파일인지(OLE 컨테이너 + EncryptionInfo/EncryptedPackage) 확인
+  function isOfficeEncrypted(buffer) {
+    try {
+      const cfb = XLSX.CFB.read(new Uint8Array(buffer), { type: 'array' });
+      return !!(XLSX.CFB.find(cfb, 'EncryptionInfo') && XLSX.CFB.find(cfb, 'EncryptedPackage'));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 반환: 해독된 일반 xlsx 바이트(Uint8Array). 실패 시 Error('WRONG_PASSWORD' | 'UNSUPPORTED_ENCRYPTION' | 'NOT_ENCRYPTED')
+  function decryptAgileXlsx(buffer, password) {
+    let cfb;
+    try { cfb = XLSX.CFB.read(new Uint8Array(buffer), { type: 'array' }); }
+    catch (e) { throw new Error('NOT_ENCRYPTED'); }
+    const infoEntry = XLSX.CFB.find(cfb, 'EncryptionInfo');
+    const pkgEntry = XLSX.CFB.find(cfb, 'EncryptedPackage');
+    if (!infoEntry || !pkgEntry) throw new Error('NOT_ENCRYPTED');
+
+    let info = infoEntry.content, pkg = pkgEntry.content;
+    if (!(info instanceof Uint8Array)) info = new Uint8Array(info);
+    if (!(pkg instanceof Uint8Array)) pkg = new Uint8Array(pkg);
+
+    // 버전 4.4 = Agile. (3.2/4.2 = 엑셀 2007의 구형 "표준" 암호화: 미지원)
+    const major = info[0] | (info[1] << 8), minor = info[2] | (info[3] << 8);
+    if (!(major === 4 && minor === 4)) throw new Error('UNSUPPORTED_ENCRYPTION');
+
+    const xml = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(info.slice(8)), 'application/xml');
+    if (xml.getElementsByTagName('parsererror').length > 0) throw new Error('UNSUPPORTED_ENCRYPTION');
+    const keyDataEl = xml.getElementsByTagName('keyData')[0];
+    const encKeyEl = xml.getElementsByTagName('p:encryptedKey')[0] || xml.getElementsByTagName('encryptedKey')[0];
+    if (!keyDataEl || !encKeyEl) throw new Error('UNSUPPORTED_ENCRYPTION');
+
+    const keyData = {
+      salt: b64ToU8(keyDataEl.getAttribute('saltValue')),
+      alg: keyDataEl.getAttribute('hashAlgorithm'),
+      blockSize: parseInt(keyDataEl.getAttribute('blockSize'), 10)
+    };
+    const ek = {
+      encKeyValue: b64ToU8(encKeyEl.getAttribute('encryptedKeyValue')),
+      salt: b64ToU8(encKeyEl.getAttribute('saltValue')),
+      alg: encKeyEl.getAttribute('hashAlgorithm'),
+      spinCount: parseInt(encKeyEl.getAttribute('spinCount'), 10),
+      keyBits: parseInt(encKeyEl.getAttribute('keyBits'), 10),
+      encVerifierInput: b64ToU8(encKeyEl.getAttribute('encryptedVerifierHashInput')),
+      encVerifierValue: b64ToU8(encKeyEl.getAttribute('encryptedVerifierHashValue'))
+    };
+
+    // 1) 비밀번호가 맞는지 확인
+    const spin = spinHash(password, ek.alg, ek.salt, ek.spinCount);
+    const verInput = aesCbcDecryptNoPad(deriveKey(spin, ek.alg, ek.keyBits, AGILE_BLOCK_KEYS.verifierInput), ek.salt, ek.encVerifierInput);
+    const verValue = aesCbcDecryptNoPad(deriveKey(spin, ek.alg, ek.keyBits, AGILE_BLOCK_KEYS.verifierValue), ek.salt, ek.encVerifierValue);
+    const expected = hashConcat(ek.alg, [verInput]);
+    let ok = expected.length > 0;
+    for (let i = 0; i < expected.length; i++) {
+      if (expected[i] !== verValue[i]) { ok = false; break; }
+    }
+    if (!ok) throw new Error('WRONG_PASSWORD');
+
+    // 2) 실제 본문을 암호화한 비밀키를 꺼낸다
+    const secretKey = aesCbcDecryptNoPad(deriveKey(spin, ek.alg, ek.keyBits, AGILE_BLOCK_KEYS.key), ek.salt, ek.encKeyValue);
+
+    // 3) 본문(EncryptedPackage)을 4096바이트 조각 단위로 해독한다. 앞 8바이트는 원래 길이.
+    const SEG = 4096;
+    const dataLen = pkg.length - 8;
+    const parts = [];
+    for (let off = 0, idx = 0; off < dataLen; off += SEG, idx++) {
+      let chunk = pkg.slice(8 + off, 8 + Math.min(off + SEG, dataLen));
+      const rem = chunk.length % keyData.blockSize;
+      if (rem) {
+        const padded = new Uint8Array(chunk.length + (keyData.blockSize - rem));
+        padded.set(chunk);
+        chunk = padded;
+      }
+      const iv = fitLength(hashConcat(keyData.alg, [keyData.salt, u32le(idx)]), keyData.blockSize);
+      parts.push(aesCbcDecryptNoPad(secretKey, iv, chunk));
+    }
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const out = new Uint8Array(total);
+    let pos = 0;
+    parts.forEach((p) => { out.set(p, pos); pos += p.length; });
+    const realLen = (pkg[0] | (pkg[1] << 8) | (pkg[2] << 16) | (pkg[3] << 24)) >>> 0;
+    return out.slice(0, realLen);
+  }
+
+  // ============================================================
+  // 엑셀 미리보기: 암호는 "왼쪽 목록의 해당 파일 항목"에서 입력한다.
+  // - 파일을 추가하면 암호화 여부를 바로 감지해서, 암호가 걸린 엑셀에만 암호 입력칸을 보여준다.
+  // - item.password(입력한 암호), item.excelWb(해독 성공한 통합문서 캐시), item.pwMsg(상태 문구)
+  // ============================================================
+  function setExcelPassword(index, value) {
+    const item = fileList[index];
+    if (!item) return;
+    item.password = value;
+    item.excelWb = null; // 암호가 바뀌면 이전 결과는 버린다
+  }
+  function applyExcelPassword(index, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    const item = fileList[index];
+    if (!item) return;
+    if (!item.password || !item.password.trim()) {
+      item.pwMsg = '암호를 입력해 주세요.';
+      item.pwOk = false;
+      renderFileList();
+      return;
+    }
+    item.excelWb = null;
+    item.pwMsg = '';
+    selectItem(index); // 목록을 다시 그리고, 이 파일 미리보기를 새 암호로 다시 시도
+  }
+  window.setExcelPassword = setExcelPassword;
+  window.applyExcelPassword = applyExcelPassword;
+
+  async function loadExcelWorkbook(item) {
+    if (item.excelWb) return item.excelWb;
+    const buf = await item.file.arrayBuffer();
+    let wb = null, firstErr = null;
+    try { wb = XLSX.read(buf, { type: 'array' }); } catch (e) { firstErr = e; }
+
+    if (!wb || !wb.SheetNames || wb.SheetNames.length === 0) {
+      if (isOfficeEncrypted(buf)) {
+        if (!item.needsPassword) { item.needsPassword = true; renderFileList(); }
+        if (!item.password || !item.password.trim()) throw new Error('PASSWORD_REQUIRED');
+        if (typeof forge === 'undefined') throw new Error('FORGE_MISSING');
+        // 반복 해시 계산(약 1~3초) 동안 화면이 멈춰 보이지 않도록 한 틱 양보
+        await new Promise((r) => setTimeout(r, 30));
+        const plain = decryptAgileXlsx(buf, item.password.trim());
+        wb = XLSX.read(plain, { type: 'array' });
+      } else if (firstErr && /password|encrypt|protect|암호/i.test(firstErr.message || '')) {
+        throw new Error('UNSUPPORTED_ENCRYPTION'); // 구형(.xls) 암호 등
+      } else {
+        throw firstErr || new Error('시트를 찾을 수 없습니다.');
+      }
+    }
+    if (!wb.SheetNames || wb.SheetNames.length === 0) throw new Error('시트를 찾을 수 없습니다.');
+    item.excelWb = wb;
+    return wb;
+  }
+
+  async function showExcelPreview(item, box) {
     box.classList.add('excel-mode');
-    box.innerHTML = '<div class="preview-placeholder">엑셀 파일을 불러오는 중...</div>';
+    const hasPw = !!(item.password && item.password.trim());
+    box.innerHTML = '<div class="preview-placeholder">' + (hasPw && item.needsPassword
+      ? '암호를 해독하는 중... (몇 초 걸릴 수 있습니다)'
+      : '엑셀 파일을 불러오는 중...') + '</div>';
+
+    const setMsg = (msg, ok) => {
+      if (item.pwMsg === msg && item.pwOk === ok) return;
+      item.pwMsg = msg; item.pwOk = ok;
+      renderFileList();
+    };
+
     try {
       if (typeof XLSX === 'undefined') throw new Error('엑셀 미리보기 라이브러리를 불러오지 못했습니다.');
-      const buf = await file.arrayBuffer();
-      const readOpts = { type: 'array' };
-      if (passwordOverride) readOpts.password = passwordOverride;
-      const workbook = XLSX.read(buf, readOpts);
+      const wasLocked = !!item.needsPassword;
+      const workbook = await loadExcelWorkbook(item);
+      if (wasLocked && hasPw) setMsg('✅ 암호 해독 완료', true);
       const sheetNames = workbook.SheetNames;
-      if (!sheetNames || sheetNames.length === 0) throw new Error('시트를 찾을 수 없습니다.');
 
       box.innerHTML = '';
       const wrap = document.createElement('div');
@@ -2688,7 +2887,7 @@ async function splitPdfByPage() {
 
       function renderSheet(name) {
         const sheet = workbook.Sheets[name];
-        tableHolder.innerHTML = XLSX.utils.sheet_to_html(sheet, { editable: false });
+        tableHolder.innerHTML = sheet ? XLSX.utils.sheet_to_html(sheet, { editable: false }) : '';
         const table = tableHolder.querySelector('table');
         if (table) table.classList.add('excel-preview-table');
         if (tabsEl) {
@@ -2712,18 +2911,382 @@ async function splitPdfByPage() {
       box.appendChild(wrap);
     } catch (err) {
       console.error(EXCEL_LOG_PREFIX, '엑셀 미리보기 오류:', err);
-      if (looksLikeEncryptedExcelError(err)) {
-        showExcelPasswordPrompt(file, box, passwordOverride ? '비밀번호가 올바르지 않습니다. 다시 입력해 주세요.' : '');
-        return;
+      const m = (err && err.message) || '';
+      let html;
+      if (m === 'PASSWORD_REQUIRED') {
+        setMsg('암호를 입력하고 "적용"을 눌러주세요.', false);
+        html = '🔒 암호로 보호된 엑셀 파일입니다.<br>왼쪽 목록에서 <b>이 파일 항목의 "엑셀 암호" 칸</b>에 암호를 입력하고 Enter 또는 "적용"을 눌러주세요.<br><span style="font-size:12px;">(암호는 브라우저 안에서만 사용되며 서버로 전송되지 않습니다)</span>';
+      } else if (m === 'WRONG_PASSWORD') {
+        setMsg('❌ 암호가 틀렸습니다.', false);
+        html = '❌ 암호가 틀렸습니다.<br>왼쪽 목록의 암호 칸에서 다시 입력해 주세요.';
+      } else if (m === 'UNSUPPORTED_ENCRYPTION') {
+        setMsg('⚠️ 지원하지 않는 암호화 방식', false);
+        html = '⚠️ 이 파일의 암호화 방식은 미리보기를 지원하지 않습니다.<br>(엑셀 2010 이상에서 "암호 설정"으로 저장한 .xlsx만 지원 — 구형 .xls나 엑셀 2007 형식은 불가)<br>"📥 엑셀로 열기"로 내려받아 엑셀에서 열어보세요.';
+      } else if (m === 'FORGE_MISSING') {
+        html = '암호 해독용 라이브러리(node-forge)를 불러오지 못했습니다.<br>인터넷 연결이나 광고 차단/기관 네트워크의 CDN 차단 여부를 확인해 주세요.';
+      } else {
+        html = '엑셀 파일을 미리 볼 수 없습니다.<br>' + escapeHtmlForPreview(m);
       }
-      // 정확한 오류 메시지로는 "암호 보호"인지 구분이 안 되지만, 사용자가 직접
-      // 비밀번호를 입력해 볼 수 있도록 시도 버튼을 함께 보여준다.
-      box.innerHTML = '<div class="preview-placeholder">엑셀 파일을 미리 볼 수 없습니다.<br>' + (err && err.message ? err.message : '') +
-        '<br><button type="button" class="excel-try-pw-btn" style="margin-top:10px; padding:6px 14px; border:none; border-radius:6px; background:#ea580c; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">비밀번호 입력해서 다시 시도</button></div>';
-      const tryBtn = box.querySelector('.excel-try-pw-btn');
-      if (tryBtn) tryBtn.onclick = () => showExcelPasswordPrompt(file, box);
+      box.innerHTML = '<div class="preview-placeholder">' + html + '</div>';
     }
   }
+
+  // 파일이 추가되면 암호화 여부를 바로 감지해 목록에 암호 입력칸을 띄운다.
+  async function detectExcelEncryption(item) {
+    try {
+      const kind = item.kind || window.getFileKind(item.file);
+      if (kind !== 'excel') return;
+      const buf = await item.file.arrayBuffer();
+      if (isOfficeEncrypted(buf) && !item.needsPassword) {
+        item.needsPassword = true;
+        renderFileList();
+      }
+    } catch (e) { console.warn(EXCEL_LOG_PREFIX, '암호화 감지 실패:', e); }
+  }
+  if (typeof window.addFiles === 'function') {
+    const originalAddFiles = window.addFiles;
+    window.addFiles = function (files) {
+      const before = fileList.length;
+      const result = originalAddFiles.apply(this, arguments);
+      for (let i = before; i < fileList.length; i++) detectExcelEncryption(fileList[i]);
+      return result;
+    };
+  }
+
+
+  // ============================================================
+  // 엑셀·HWPX·워드(.docx) → 페이지 이미지(근사 변환) → PDF 병합에 포함
+  // - 화면에 보이는 모양을 숨은 영역에서 A4 쪽 단위로 나눈 뒤 이미지로 찍어서 쓴다.
+  //   (글자는 선택/검색 불가, 원본과 줄바꿈·쪽 수가 다를 수 있음)
+  // - 외부 라이브러리 없이 SVG foreignObject → canvas 방식. 모든 처리는 브라우저 안에서만 이뤄진다.
+  // ============================================================
+  const DOCPAGE_FONT = "'Malgun Gothic','맑은 고딕','Noto Sans KR','Apple SD Gothic Neo','Noto Sans CJK KR',sans-serif";
+  const DOCPAGE_CSS =
+    '*{box-sizing:border-box;}' +
+    '.hwpx-page{background:#fff;font-size:10pt;line-height:1.6;word-break:break-word;color:#111827;}' +
+    '.hwpx-preview-table{border-collapse:collapse;margin:4px 0;font-size:inherit;width:100%;table-layout:fixed;}' +
+    '.hwpx-preview-table td{vertical-align:top;}.hwpx-preview-table td p{margin:0;}' +
+    '.dp-docx{background:#fff;color:#1e293b;font-size:11pt;line-height:1.6;}' +
+    '.dp-docx table{border-collapse:collapse;margin:8px 0;}' +
+    '.dp-docx td,.dp-docx th{border:1px solid #94a3b8;padding:3px 6px;vertical-align:top;}' +
+    '.dp-docx img{max-width:100%;height:auto;}.dp-docx p{margin:0 0 8px 0;}' +
+    '.dp-xl table{border-collapse:collapse;table-layout:fixed;font-size:12px;color:#1e293b;background:#fff;}' +
+    '.dp-xl td,.dp-xl th{border:1px solid #94a3b8;padding:3px 6px;vertical-align:top;white-space:normal;word-break:break-all;overflow:hidden;}' +
+    '.dp-xl-title{font-size:11px;color:#64748b;margin-bottom:6px;}';
+
+  const DOCPAGE_SCALE = 1.5;     // 이미지 해상도 배율 (A4 794px 기준 1.5배 ≈ 144dpi, 용량과 선명도 절충)
+  const DOCPAGE_MAX_PAGES = 300; // 파일 하나당 최대 쪽 수(폭주 방지)
+  const PX_A4_W = 794, PX_A4_H = 1123;
+
+  function makeHost() {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-20000px;top:0;visibility:hidden;pointer-events:none;font-family:' + DOCPAGE_FONT + ';'; // 측정용 글꼴을 렌더링용과 똑같이 맞춤(안 맞으면 줄 수가 달라 쪽 나눔이 어긋남)
+    const st = document.createElement('style');
+    st.textContent = DOCPAGE_CSS;
+    host.appendChild(st);
+    document.body.appendChild(host);
+    return host;
+  }
+
+  async function waitImages(root) {
+    const imgs = Array.from(root.querySelectorAll('img'));
+    await Promise.all(imgs.map((im) => (im.decode ? im.decode().catch(() => {}) : Promise.resolve())));
+  }
+
+  // DOM 한 덩어리를 w×h(px) 캔버스로 그린다.
+  async function domToCanvas(node, w, h) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:' + w + 'px;height:' + h + 'px;overflow:hidden;background:#fff;font-family:' + DOCPAGE_FONT + ';';
+    const st = document.createElement('style');
+    st.textContent = DOCPAGE_CSS;
+    wrap.appendChild(st);
+    wrap.appendChild(node);
+    wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    const xhtml = new XMLSerializer().serializeToString(wrap);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject x="0" y="0" width="100%" height="100%">' + xhtml + '</foreignObject></svg>';
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const img = await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('페이지 이미지를 만들지 못했습니다.'));
+      im.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * DOCPAGE_SCALE);
+    canvas.height = Math.round(h * DOCPAGE_SCALE);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  function canvasToJpegBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      try {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('이미지 인코딩 실패')), 'image/jpeg', 0.85);
+      } catch (e) {
+        reject(new Error('이 브라우저는 보안 정책상 문서 이미지를 만들 수 없습니다. (Chrome/Edge 최신 버전을 사용해 주세요)'));
+      }
+    });
+  }
+
+  // 한 덩어리(el)의 직계 자식들을 쪽 높이에 맞춰 나눈다. 반환: [{ nodes:[...], height }]
+  function paginateChildren(el, contentH) {
+    const kids = Array.from(el.children);
+    const pages = [];
+    let cur = null;
+    kids.forEach((k) => {
+      const top = k.offsetTop, h = k.offsetHeight;
+      if (!cur) { cur = { nodes: [k], startTop: top, endBottom: top + h }; pages.push(cur); return; }
+      if (top + h - cur.startTop > contentH) {
+        cur = { nodes: [k], startTop: top, endBottom: top + h };
+        pages.push(cur);
+      } else {
+        cur.nodes.push(k);
+        cur.endBottom = top + h;
+      }
+    });
+    pages.forEach((p) => { p.height = p.endBottom - p.startTop; });
+    return pages;
+  }
+
+  // .hwpx-page / .dp-docx 같은 "한 장짜리 틀"을 쪽 단위로 쪼개 캔버스 배열로 만든다.
+  async function paginateFrame(frameEl, pageW, pageH, canvases) {
+    frameEl.style.position = 'relative';
+    const cs = getComputedStyle(frameEl);
+    const pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+    const contentH = Math.max(pageH - pt - pb, 100);
+    const groups = paginateChildren(frameEl, contentH);
+    for (const g of groups) {
+      if (canvases.length >= DOCPAGE_MAX_PAGES) return;
+      const hasContent = g.nodes.some((n) => (n.textContent || '').trim() !== '' || n.querySelector('img,table'));
+      if (!hasContent && groups.length > 1) continue; // 빈 쪽 건너뜀
+      const page = frameEl.cloneNode(false);
+      page.style.position = 'static';
+      page.style.minHeight = '0';
+      const h = Math.max(pageH, g.height + pt + pb); // 너무 큰 표는 쪽을 키워서 한 장에 담는다(PDF에서 A4로 축소됨)
+      page.style.height = h + 'px';
+      g.nodes.forEach((n) => page.appendChild(n.cloneNode(true)));
+      canvases.push(await domToCanvas(page, pageW, h));
+    }
+  }
+
+  async function hwpxToCanvases(file) {
+    if (typeof JSZip === 'undefined') throw new Error('압축 해제 라이브러리(JSZip)를 불러오지 못했습니다.');
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const sectionNames = Object.keys(zip.files).filter((n) => /Contents\/section\d+\.xml$/i.test(n)).sort();
+    if (sectionNames.length === 0) throw new Error('본문(section) 파일을 찾지 못했습니다.');
+    const headerEntries = zip.file(/Contents\/header\.xml$/i);
+    const headerXml = (headerEntries && headerEntries.length > 0) ? await headerEntries[0].async('string') : '';
+    const headerDoc = headerXml ? new DOMParser().parseFromString(headerXml, 'application/xml') : null;
+    const styles = parseHwpxStyles(headerDoc);
+
+    const host = makeHost();
+    const canvases = [];
+    try {
+      for (const name of sectionNames) {
+        const doc = new DOMParser().parseFromString(await zip.file(name).async('string'), 'application/xml');
+        if (doc.getElementsByTagName('parsererror').length > 0) continue;
+        const holder = document.createElement('div');
+        holder.innerHTML = renderHwpxSection(doc, styles);
+        host.appendChild(holder);
+        await waitImages(holder);
+        for (const pageEl of Array.from(holder.querySelectorAll('.hwpx-page'))) {
+          const w = Math.round(pageEl.offsetWidth) || PX_A4_W;
+          const h = Math.round(parseFloat(getComputedStyle(pageEl).minHeight)) || PX_A4_H;
+          await paginateFrame(pageEl, w, h, canvases);
+        }
+      }
+    } finally { host.remove(); }
+    if (canvases.length === 0) throw new Error('변환할 본문이 없습니다.');
+    return canvases;
+  }
+
+  async function docxToCanvases(file) {
+    if (/\.doc$/i.test(file.name)) throw new Error('이전 버전 워드(.doc)는 지원하지 않습니다. .docx로 저장 후 올려주세요.');
+    if (typeof mammoth === 'undefined') throw new Error('워드 변환 라이브러리(mammoth)를 불러오지 못했습니다.');
+    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+    const host = makeHost();
+    const canvases = [];
+    try {
+      const frame = document.createElement('div');
+      frame.className = 'dp-docx';
+      frame.style.cssText = 'width:' + PX_A4_W + 'px;min-height:' + PX_A4_H + 'px;padding:76px 70px;';
+      frame.innerHTML = result.value;
+      host.appendChild(frame);
+      await waitImages(frame);
+      await paginateFrame(frame, PX_A4_W, PX_A4_H, canvases);
+    } finally { host.remove(); }
+    if (canvases.length === 0) throw new Error('변환할 본문이 없습니다.');
+    return canvases;
+  }
+
+  async function excelToCanvases(item) {
+    const wb = await loadExcelWorkbook(item); // 암호 걸린 파일이면 목록에 입력한 암호로 해독
+    const host = makeHost();
+    const canvases = [];
+    try {
+      for (const sheetName of wb.SheetNames) {
+        const sheet = wb.Sheets[sheetName];
+        if (!sheet || !sheet['!ref']) continue;
+        const holder = document.createElement('div');
+        holder.className = 'dp-xl';
+        holder.innerHTML = XLSX.utils.sheet_to_html(sheet, { editable: false });
+        host.appendChild(holder);
+        const table = holder.querySelector('table');
+        if (!table || table.rows.length === 0) { holder.remove(); continue; }
+
+        // 열 너비: 셀이 가장 많은 행을 기준으로 고정한다(쪽마다 열 폭이 달라지지 않게)
+        table.style.tableLayout = 'auto';
+        table.style.width = 'auto';
+        let widest = table.rows[0];
+        Array.from(table.rows).forEach((r) => { if (r.cells.length > widest.cells.length) widest = r; });
+        const colWidths = Array.from(widest.cells).map((c) => Math.min(Math.max(Math.ceil(c.getBoundingClientRect().width) + 4, 40), 320)); // +4px: 소수점 반올림 때문에 글자가 줄바꿈되는 것을 막음
+        const colgroup = document.createElement('colgroup');
+        colWidths.forEach((cw) => { const col = document.createElement('col'); col.style.width = cw + 'px'; colgroup.appendChild(col); });
+        table.insertBefore(colgroup, table.firstChild);
+        table.style.tableLayout = 'fixed';
+        const tw = colWidths.reduce((a, b) => a + b, 0);
+        table.style.width = tw + 'px';
+
+        // 너무 넓으면 가로 A4로 전환, 그래도 넘치면 축소(최소 30%)
+        const MARGIN = 36, TITLE_H = 22;
+        let pageW = PX_A4_W, pageH = PX_A4_H;
+        let s = Math.min(1, (pageW - MARGIN * 2) / tw);
+        if (s < 0.55) { pageW = PX_A4_H; pageH = PX_A4_W; s = Math.min(1, (pageW - MARGIN * 2) / tw); }
+        s = Math.max(s, 0.3);
+        const capacity = (pageH - MARGIN * 2 - TITLE_H) / s; // 표 좌표계(축소 전)에서 한 쪽에 들어가는 높이
+
+        // 행을 쪽 단위로 묶기
+        const rows = Array.from(table.rows);
+        const groups = [];
+        let cur = null;
+        rows.forEach((r) => {
+          const top = r.offsetTop, h = r.offsetHeight;
+          if (!cur || top + h - cur.startTop > capacity) { cur = { rows: [r], startTop: top }; groups.push(cur); }
+          else cur.rows.push(r);
+        });
+
+        for (let gi = 0; gi < groups.length; gi++) {
+          if (canvases.length >= DOCPAGE_MAX_PAGES) break;
+          const g = groups[gi];
+          const page = document.createElement('div');
+          page.className = 'dp-xl';
+          page.style.cssText = 'width:' + pageW + 'px;height:' + pageH + 'px;padding:' + MARGIN + 'px;background:#fff;';
+          const title = document.createElement('div');
+          title.className = 'dp-xl-title';
+          title.textContent = item.file.name + ' · 시트: ' + sheetName + ' (' + (gi + 1) + '/' + groups.length + ')';
+          page.appendChild(title);
+          const inner = document.createElement('div');
+          inner.style.cssText = 'width:' + tw + 'px;transform:scale(' + s + ');transform-origin:top left;';
+          const t2 = table.cloneNode(false);
+          t2.appendChild(colgroup.cloneNode(true));
+          const tb = document.createElement('tbody');
+          g.rows.forEach((r) => tb.appendChild(r.cloneNode(true)));
+          t2.appendChild(tb);
+          inner.appendChild(t2);
+          page.appendChild(inner);
+          canvases.push(await domToCanvas(page, pageW, pageH));
+        }
+        holder.remove();
+      }
+    } finally { host.remove(); }
+    if (canvases.length === 0) throw new Error('표시할 데이터가 있는 시트가 없습니다.');
+    return canvases;
+  }
+
+  function parsePageRange(text, total) {
+    if (!text || !text.trim()) return null; // 전체
+    const picked = [];
+    text.split(',').forEach((part) => {
+      part = part.trim();
+      if (part.includes('-')) {
+        const [a, b] = part.split('-').map((n) => parseInt(n.trim(), 10));
+        for (let p = a; p <= b; p++) if (p >= 1 && p <= total) picked.push(p - 1);
+      } else {
+        const p = parseInt(part, 10);
+        if (p >= 1 && p <= total) picked.push(p - 1);
+      }
+    });
+    return picked;
+  }
+
+  const DOCPAGE_KINDS = ['hwpx', 'excel', 'docx'];
+  const KIND_LABEL = { hwpx: '한글', excel: '엑셀', docx: '워드' };
+
+  // 현재 목록에서 HWPX/엑셀/워드를 페이지 이미지 항목으로 바꾼 "임시 목록"을 만든다.
+  async function buildConvertedList(setStatusText) {
+    const out = [];
+    const total = fileList.filter((it) => DOCPAGE_KINDS.includes(it.kind || window.getFileKind(it.file))).length;
+    let done = 0;
+    for (const item of fileList) {
+      const kind = item.kind || window.getFileKind(item.file);
+      if (!DOCPAGE_KINDS.includes(kind)) { out.push(item); continue; }
+      done++;
+      setStatusText('📄 ' + KIND_LABEL[kind] + ' 문서를 페이지 이미지로 변환 중... (' + done + '/' + total + ') ' + item.file.name);
+      await new Promise((r) => setTimeout(r, 20)); // 안내 문구가 화면에 먼저 그려지도록
+      let canvases;
+      try {
+        if (kind === 'hwpx') canvases = await hwpxToCanvases(item.file);
+        else if (kind === 'docx') canvases = await docxToCanvases(item.file);
+        else canvases = await excelToCanvases(item);
+      } catch (err) {
+        const m = (err && err.message) || String(err);
+        if (m === 'PASSWORD_REQUIRED') throw new Error('"' + item.file.name + '"은(는) 암호가 필요합니다. 목록에서 암호를 입력하고 적용해 주세요.');
+        if (m === 'WRONG_PASSWORD') throw new Error('"' + item.file.name + '"의 암호가 틀렸습니다.');
+        if (m === 'UNSUPPORTED_ENCRYPTION') throw new Error('"' + item.file.name + '"은(는) 지원하지 않는 암호화 방식입니다.');
+        throw new Error('"' + item.file.name + '" 변환 실패: ' + m);
+      }
+      const picked = parsePageRange(item.pageRange, canvases.length);
+      const base = item.file.name.replace(/\.[^.]+$/, '');
+      const idxs = picked || canvases.map((_, i) => i);
+      if (idxs.length === 0) throw new Error('"' + item.file.name + '": 추출 범위에 해당하는 쪽이 없습니다. (전체 ' + canvases.length + '쪽)');
+      for (let n = 0; n < idxs.length; n++) {
+        const blob = await canvasToJpegBlob(canvases[idxs[n]]);
+        const name = (n === 0 && idxs[n] === 0) ? base + '.jpg' : base + '_p' + String(idxs[n] + 1).padStart(2, '0') + '.jpg';
+        out.push({
+          file: new File([blob], name, { type: 'image/jpeg' }),
+          kind: 'image', pageRange: '', rotation: item.rotation || 0, isDocPage: true
+        });
+      }
+    }
+    return out;
+  }
+
+  // 병합/최대압축/이미지변환 함수를 감싸서: 변환된 임시 목록으로 원래 함수를 실행하고, 끝나면 원래 목록으로 되돌린다.
+  function wrapWithDocConversion(fnName) {
+    const original = window[fnName];
+    if (typeof original !== 'function') return;
+    window[fnName] = async function () {
+      const hasDoc = fileList.some((it) => DOCPAGE_KINDS.includes(it.kind || window.getFileKind(it.file)));
+      if (!hasDoc) return original.apply(this, arguments);
+      const statusDiv = document.getElementById('status');
+      const buttons = ['merge-btn', 'img-high-btn', 'img-low-btn', 'compress-btn', 'split-btn'].map((id) => document.getElementById(id));
+      buttons.forEach((b) => { if (b) b.disabled = true; });
+      const realList = fileList;
+      let converted;
+      try {
+        converted = await buildConvertedList((t) => { statusDiv.innerText = t; statusDiv.style.color = '#2563eb'; });
+      } catch (err) {
+        console.error('문서 변환 오류:', err);
+        statusDiv.innerText = '❌ ' + (err.message || err);
+        statusDiv.style.color = '#ef4444';
+        buttons.forEach((b) => { if (b) b.disabled = false; });
+        return;
+      }
+      buttons.forEach((b) => { if (b) b.disabled = false; });
+      fileList = converted;
+      try {
+        return await original.apply(this, arguments);
+      } finally {
+        fileList = realList;
+      }
+    };
+  }
+  wrapWithDocConversion('mergeFiles');
+  wrapWithDocConversion('mergeFilesCompressed');
+  wrapWithDocConversion('exportAsImages');
 
   async function showDocxPreview(file, box) {
     box.classList.add('docx-mode');
@@ -2772,7 +3335,7 @@ async function splitPdfByPage() {
         if (kind === 'excel') {
           box.innerHTML = '';
           box.classList.remove('pdf-scroll-mode', 'hwpx-text-mode');
-          await showExcelPreview(item.file, box);
+          await showExcelPreview(item, box);
           return;
         }
         if (kind === 'docx') {
@@ -3501,6 +4064,7 @@ async function splitPdfByPage() {
       if (typeof XLSX === 'undefined') missing.push('XLSX(엑셀 미리보기용)');
       if (typeof mammoth === 'undefined') missing.push('mammoth(워드 미리보기용)');
       if (typeof JSZip === 'undefined') missing.push('JSZip(압축파일 처리용)');
+      if (typeof forge === 'undefined') missing.push('forge(암호 걸린 엑셀 해독용)');
       if (typeof PDFLib === 'undefined') missing.push('PDFLib(PDF 병합용)');
       if (missing.length > 0) {
         const el = document.createElement('div');
