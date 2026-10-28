@@ -775,20 +775,23 @@
        .empty-msg는 파일을 하나라도 추가하면 renderFileList()가 통째로
        지우고 실제 파일 목록으로 교체하므로, 이 안내도 자연히 함께 사라진다. */
     .empty-msg-text { margin-bottom: 6px; font-size: 16px; }
-    .promo-tools-title { margin-bottom: 14px; font-size: 13.5px; color: #64748b; font-weight: 600; }
+    .promo-tools-title { flex: 0 0 auto; margin-bottom: 8px; font-size: 13.5px; color: #64748b; font-weight: 600; }
     /* 파일을 아직 선택/드롭하지 않았을 때, 미리보기 창(우측) 안에 보여주는
        안내 문구 + 유용한 프로그램 모음. 파일이 선택되면 showPreview()가
        이 내용을 실제 미리보기로 바로 덮어쓰므로 자연히 사라진다. */
-    .preview-empty-promo { width: 100%; height: 100%; overflow-y: auto; text-align: center; color: #94a3b8; padding: 16px 14px; box-sizing: border-box; }
-    .promo-tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; text-align: left; }
+    .preview-empty-promo { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; text-align: center; color: #94a3b8; padding: 8px 10px; box-sizing: border-box; }
+    .promo-tools { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: left; }
     @media (max-width: 480px) {
-      .promo-tools { grid-template-columns: 1fr; }
+      .promo-tools { grid-template-columns: 1fr; grid-template-rows: none; flex: 0 0 auto; }
+      .preview-empty-promo { overflow-y: auto; }
     }
     .promo-tool-card {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
+      padding: 6px 10px;
+      min-height: 0;
+      overflow: hidden;
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -797,10 +800,10 @@
       transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
     }
     .promo-tool-card:hover { border-color: #93c5fd; box-shadow: 0 4px 10px rgba(37,99,235,0.1); transform: translateY(-1px); }
-    .promo-tool-icon { font-size: 22px; flex-shrink: 0; }
+    .promo-tool-icon { font-size: clamp(18px, 2.6vh, 22px); flex-shrink: 0; }
     .promo-tool-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .promo-tool-body strong { font-size: 15px; color: #1e293b; }
-    .promo-tool-desc { font-size: 13px; color: #64748b; line-height: 1.4; white-space: normal; }
+    .promo-tool-body strong { font-size: clamp(12px, 1.7vh, 15px); color: #1e293b; }
+    .promo-tool-desc { font-size: clamp(10.5px, 1.45vh, 13px); color: #64748b; line-height: 1.3; white-space: normal; }
     .promo-tool-dl { margin-left: auto; font-size: 16px; color: #2563eb; flex-shrink: 0; }
     /* 프로그램 다운로드 전 안내 팝업 */
     .promo-confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
@@ -981,7 +984,6 @@
           </div>
           <div class="preview-box" id="previewBox">
             <div class="preview-empty-promo">
-              <div class="empty-msg-text">목록에서 파일을<br>클릭하면 표시됩니다.</div>
               <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
               <div class="promo-tools">
                 <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
@@ -1013,6 +1015,14 @@
                   <span class="promo-tool-body">
                     <strong>스마트 일정 알라미</strong>
                     <span class="promo-tool-desc">초과근무 1시간마다 팝업창 알림<br>일정 입력 후 웹에서 조회 가능</span>
+                  </span>
+                  <span class="promo-tool-dl">⬇</span>
+                </a>
+                <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/untagged-d588647fefb0cbc94c36/SmartClipboard.exe" download>
+                  <span class="promo-tool-icon">📋</span>
+                  <span class="promo-tool-body">
+                    <strong>스마트클립보드</strong>
+                    <span class="promo-tool-desc">컴퓨터에서 복사한 정보를 클립보드에 기록<br>원하는 문구를 고정하여 반복 작업 등 가능</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
@@ -1480,7 +1490,6 @@ async function showPreview(itemData) {
   if (!itemData) {
     previewBox.innerHTML = `
       <div class="preview-empty-promo">
-        <div class="empty-msg-text">목록에서 파일을<br>클릭하면 표시됩니다.</div>
         <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
         <div class="promo-tools">
           <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/miniexplorer/MiniExplorer.zip" download>
@@ -1512,6 +1521,14 @@ async function showPreview(itemData) {
             <span class="promo-tool-body">
               <strong>스마트 일정 알라미</strong>
               <span class="promo-tool-desc">초과근무 1시간마다 팝업창 알림<br>일정 입력 후 웹에서 조회 가능</span>
+            </span>
+            <span class="promo-tool-dl">⬇</span>
+          </a>
+          <a class="promo-tool-card" href="https://github.com/nunco-git/ezgong/releases/download/untagged-d588647fefb0cbc94c36/SmartClipboard.exe" download>
+            <span class="promo-tool-icon">📋</span>
+            <span class="promo-tool-body">
+              <strong>스마트클립보드</strong>
+              <span class="promo-tool-desc">컴퓨터에서 복사한 정보를 클립보드에 기록<br>원하는 문구를 고정하여 반복 작업 등 가능</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
