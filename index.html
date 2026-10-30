@@ -829,7 +829,7 @@
       /* 고정 px 대신 화면 세로 높이(vh)에 비례해서 잡아, 기기/모니터 화면
          크기에 따라 자동으로 커지거나 작아지게 한다 (너무 작은 화면에서도
          최소 220px는 보장, 너무 큰 화면에서 과도하게 커지지 않도록 620px로 제한). */
-      .file-list-container, .preview-panel { height: 46vh; min-height: 220px; max-height: 620px; }
+      .file-list-container, .preview-panel { height: 69vh; min-height: 330px; max-height: 930px; }
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -916,6 +916,13 @@
        480px 이하에서 별도로 이미 적용됨). */
     @media (min-width: 481px) and (max-width: 1000px) {
       .main-btn-row .btn-main { flex-basis: 100%; }
+    }
+
+    /* 목록창/미리보기창 세로 길이를 기존보다 약 1.5배로 확대 (데스크톱).
+       화면 높이를 넘으면 main-content 안에서 스크롤해서 아래 버튼을 본다. */
+    @media (min-width: 1181px) {
+      .editor-layout { flex: 0 0 auto; height: 78vh; min-height: 330px; }
+      .file-list-container, .preview-panel { height: 100%; max-height: none; }
     }
     /* 암호가 걸린 엑셀 파일의 목록 내 암호 입력줄 */
     .excel-pw-row { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 6px 8px; border-top: 1px solid #fed7aa; }
@@ -1565,7 +1572,7 @@ async function showPreview(itemData) {
       // 다만 화면이 아주 작은 경우를 대비해 최소 460px은 보장한다.
       // (사용자가 preview-panel을 resize:vertical로 직접 드래그해 세로 길이를
       //  추가로 조절할 수도 있다 — 이 초기값은 어디까지나 "보기 좋은 기본값".)
-      const stableHeight = Math.max(window.innerHeight * 0.82, 220);
+      const stableHeight = Math.max(window.innerHeight * 1.23, 330);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
@@ -3511,7 +3518,7 @@ async function splitPdfByPage() {
     if (!mobileLayoutQuery.matches) return; // 데스크톱은 사용자의 수동 크기조절을 존중
     const previewPanelEl = document.querySelector('.preview-panel');
     if (previewPanelEl && !previewPanelEl.classList.contains('is-fullscreen')) {
-      const stableHeight = Math.max(window.innerHeight * 0.82, 220);
+      const stableHeight = Math.max(window.innerHeight * 1.23, 330);
       previewPanelEl.style.height = `${stableHeight}px`;
       previewPanelHeightInitialized = true;
     }
