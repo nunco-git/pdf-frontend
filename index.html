@@ -829,7 +829,10 @@
       /* 고정 px 대신 화면 세로 높이(vh)에 비례해서 잡아, 기기/모니터 화면
          크기에 따라 자동으로 커지거나 작아지게 한다 (너무 작은 화면에서도
          최소 220px는 보장, 너무 큰 화면에서 과도하게 커지지 않도록 620px로 제한). */
-      .file-list-container, .preview-panel { height: 69vh; min-height: 330px; max-height: 930px; }
+      .file-list-container, .preview-panel { height: 46vh; min-height: 220px; max-height: 620px; }
+      /* 파일이 들어와 미리보기 중일 때만 1.5배로 확대 */
+      .main-content.has-active-preview .file-list-container,
+      .main-content.has-active-preview .preview-panel { height: 69vh; min-height: 330px; max-height: 930px; }
     }
     @media (max-width: 640px) {
       .main-content { padding: 20px; border-radius: 12px; }
@@ -918,11 +921,13 @@
       .main-btn-row .btn-main { flex-basis: 100%; }
     }
 
-    /* 목록창/미리보기창 세로 길이를 기존보다 약 1.5배로 확대 (데스크톱).
+    /* 파일이 들어와 미리보기 중일 때(.has-active-preview)만 목록창/미리보기창을
+       세로로 약 1.5배 확대 (데스크톱). 처음(파일 없음)에는 기존 기본 크기 그대로.
        화면 높이를 넘으면 main-content 안에서 스크롤해서 아래 버튼을 본다. */
     @media (min-width: 1181px) {
-      .editor-layout { flex: 0 0 auto; height: 78vh; min-height: 330px; }
-      .file-list-container, .preview-panel { height: 100%; max-height: none; }
+      .main-content.has-active-preview .editor-layout { flex: 0 0 auto; height: 78vh; min-height: 330px; }
+      .main-content.has-active-preview .file-list-container,
+      .main-content.has-active-preview .preview-panel { height: 100%; max-height: none; }
     }
     /* 암호가 걸린 엑셀 파일의 목록 내 암호 입력줄 */
     .excel-pw-row { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 6px 8px; border-top: 1px solid #fed7aa; }
