@@ -808,7 +808,15 @@
     /* 프로그램 다운로드 전 안내 팝업 */
     .promo-confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
     .promo-confirm-overlay.is-open { display: flex; }
-    .promo-confirm-box { background: #fff; border-radius: 14px; padding: 28px 24px 22px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
+    .promo-confirm-box { background: #fff; border-radius: 14px; padding: 26px 24px 22px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.25); max-height: calc(100vh - 40px); overflow-y: auto; }
+    /* 다운로드 경고창 대처 안내 */
+    .promo-dl-guide { text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; font-size: 13px; color: #334155; line-height: 1.5; }
+    .promo-dl-guide-title { font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13.5px; }
+    .promo-dl-guide ol { margin: 0; padding: 0; list-style: none; counter-reset: pdg; }
+    .promo-dl-guide ol li { counter-increment: pdg; position: relative; padding: 3px 0 3px 28px; }
+    .promo-dl-guide ol li::before { content: counter(pdg); position: absolute; left: 0; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: #2563eb; color: #fff; font-weight: 700; font-size: 11.5px; display: flex; align-items: center; justify-content: center; }
+    .promo-dl-guide .pdg-key { display: inline-block; padding: 0 6px; border: 1px solid #cbd5e1; border-radius: 5px; background: #fff; font-weight: 700; line-height: 1.4; }
+    .promo-dl-guide .pdg-tip { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 12.5px; color: #475569; }
     .promo-confirm-icon { font-size: 32px; margin-bottom: 10px; }
     .promo-confirm-msg { font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 14px; }
     .promo-confirm-question { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
@@ -1097,6 +1105,16 @@
     <div class="promo-confirm-box" role="dialog" aria-modal="true" aria-labelledby="promoConfirmQuestion">
       <div class="promo-confirm-icon">⚠️</div>
       <div class="promo-confirm-msg">만일을 위해 공공기관에서 사용할 때는 보안 담당자에게 사용상 문제소지가 없는지 확인 후 사용하세요.</div>
+      <div class="promo-dl-guide">
+        <div class="promo-dl-guide-title">💡 다운로드 경고창이 뜨는 경우</div>
+        <ol>
+          <li>경고창 우측 <span class="pdg-key">⋯</span> (점 3개) 클릭</li>
+          <li><b>유지</b> 선택</li>
+          <li><b>삭제</b> 버튼 옆 <span class="pdg-key">˅</span> 선택</li>
+          <li><b>그래도 계속</b> 선택</li>
+        </ol>
+        <div class="pdg-tip">실행할 때 <b>"Windows의 PC 보호"</b> 창이 뜨면 <b>추가 정보 → 실행</b>을 누르세요.</div>
+      </div>
       <div class="promo-confirm-question" id="promoConfirmQuestion">다운받으시겠습니까?</div>
       <div class="promo-confirm-actions">
         <button type="button" class="promo-confirm-cancel" id="promoConfirmCancel">취소</button>
