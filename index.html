@@ -821,6 +821,8 @@
     .promo-confirm-msg { font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 14px; }
     .promo-confirm-question { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
     .promo-confirm-actions { display: flex; gap: 10px; }
+    .promo-confirm-ad { display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.5; text-align: center; }
+    .promo-confirm-ad.is-shown { display: block; }
     .promo-confirm-actions button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; }
     .promo-confirm-cancel { background: #fff; border-color: #cbd5e1; color: #475569; }
     .promo-confirm-cancel:hover { background: #f1f5f9; }
@@ -1006,19 +1008,19 @@
             <div class="preview-empty-promo">
               <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
               <div class="promo-tools">
-                <a class="promo-tool-card" href="https://smartgong.kr/download/smart-explorer" download>
+                <a class="promo-tool-card" href="https://smartgong.kr/download/smart-explorer" download data-ads="1">
                   <span class="promo-tool-icon">🔍</span>
                   <span class="promo-tool-body">
                     <strong>스마트탐색기</strong>
-                    <span class="promo-tool-desc">파일명은 물론 한글·PDF·엑셀 문서 본문 내용까지 찾는 화면 분할 탐색기<br>PDF·엑셀·PPT·이미지·압축파일 미리보기, 폴더 고정 가능<br><small style="opacity:.75">무료 · 창 오른쪽이나 왼쪽 하단에 광고가 표시될 수 있습니다. 설치 없이 실행, exe 파일을 지우면 삭제됩니다.</small></span>
+                    <span class="promo-tool-desc">파일명은 물론 한글·PDF·엑셀 문서 본문 내용까지 찾는 화면 분할 탐색기<br>PDF·엑셀·PPT·이미지·압축파일 미리보기, 폴더 고정 가능</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
-                <a class="promo-tool-card" href="https://smartgong.kr/download/smart-pdf-editor" download>
+                <a class="promo-tool-card" href="https://smartgong.kr/download/smart-pdf-editor" download data-ads="1">
                   <span class="promo-tool-icon">📝</span>
                   <span class="promo-tool-body">
                     <strong>스마트PDF Editor</strong>
-                    <span class="promo-tool-desc">PDF를 보면서 글자를 클릭해 바로 수정, 색칠·감추기·도형·메모<br>쪽 회전·원하는 쪽만 저장·영역 캡쳐, 여러 파일을 탭으로<br><small style="opacity:.75">무료 · 창 오른쪽이나 왼쪽 하단에 광고가 표시될 수 있습니다. 설치 없이 실행, exe 파일을 지우면 삭제됩니다.</small></span>
+                    <span class="promo-tool-desc">PDF를 보면서 글자를 클릭해 바로 수정, 색칠·감추기·도형·메모<br>쪽 회전·원하는 쪽만 저장·영역 캡쳐, 여러 파일을 탭으로</span>
                   </span>
                   <span class="promo-tool-dl">⬇</span>
                 </a>
@@ -1120,6 +1122,7 @@
         <button type="button" class="promo-confirm-cancel" id="promoConfirmCancel">취소</button>
         <button type="button" class="promo-confirm-ok" id="promoConfirmOk">다운로드</button>
       </div>
+      <div class="promo-confirm-ad" id="promoConfirmAd">무료 프로그램 · 창 오른쪽이나 왼쪽 하단에 광고가 표시될 수 있습니다.<br>설치 없이 실행하며, exe 파일을 지우면 삭제됩니다.</div>
     </div>
   </div>
 
@@ -1148,6 +1151,8 @@
       var card = e.target.closest ? e.target.closest('.promo-tool-card') : null;
       if (!card) return;
       e.preventDefault();
+      var adNote = document.getElementById('promoConfirmAd');
+      if (adNote) adNote.classList.toggle('is-shown', card.getAttribute('data-ads') === '1');
       openPromoConfirm(card.getAttribute('href'), card.getAttribute('download'));
     });
 
@@ -1530,19 +1535,19 @@ async function showPreview(itemData) {
       <div class="preview-empty-promo">
         <div class="promo-tools-title">실무에서 활용하는 유용한 프로그램 모음</div>
         <div class="promo-tools">
-          <a class="promo-tool-card" href="https://smartgong.kr/download/smart-explorer" download>
+          <a class="promo-tool-card" href="https://smartgong.kr/download/smart-explorer" download data-ads="1">
             <span class="promo-tool-icon">🔍</span>
             <span class="promo-tool-body">
               <strong>스마트탐색기</strong>
-              <span class="promo-tool-desc">파일명은 물론 한글·PDF·엑셀 문서 본문 내용까지 찾는 화면 분할 탐색기<br>PDF·엑셀·PPT·이미지·압축파일 미리보기, 폴더 고정 가능<br><small style="opacity:.75">무료 · 창 오른쪽이나 왼쪽 하단에 광고가 표시될 수 있습니다. 설치 없이 실행, exe 파일을 지우면 삭제됩니다.</small></span>
+              <span class="promo-tool-desc">파일명은 물론 한글·PDF·엑셀 문서 본문 내용까지 찾는 화면 분할 탐색기<br>PDF·엑셀·PPT·이미지·압축파일 미리보기, 폴더 고정 가능</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
-          <a class="promo-tool-card" href="https://smartgong.kr/download/smart-pdf-editor" download>
+          <a class="promo-tool-card" href="https://smartgong.kr/download/smart-pdf-editor" download data-ads="1">
             <span class="promo-tool-icon">📝</span>
             <span class="promo-tool-body">
               <strong>스마트PDF Editor</strong>
-              <span class="promo-tool-desc">PDF를 보면서 글자를 클릭해 바로 수정, 색칠·감추기·도형·메모<br>쪽 회전·원하는 쪽만 저장·영역 캡쳐, 여러 파일을 탭으로<br><small style="opacity:.75">무료 · 창 오른쪽이나 왼쪽 하단에 광고가 표시될 수 있습니다. 설치 없이 실행, exe 파일을 지우면 삭제됩니다.</small></span>
+              <span class="promo-tool-desc">PDF를 보면서 글자를 클릭해 바로 수정, 색칠·감추기·도형·메모<br>쪽 회전·원하는 쪽만 저장·영역 캡쳐, 여러 파일을 탭으로</span>
             </span>
             <span class="promo-tool-dl">⬇</span>
           </a>
