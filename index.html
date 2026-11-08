@@ -1014,7 +1014,7 @@
             <span class="drop-icon">📂</span>
             <strong>클릭하거나 파일(PDF, 이미지, ZIP, 이중 ZIP)을<br>이곳으로 끌어다 놓으세요</strong>
             <span style="display:block; font-size:11.5px; color:#94a3b8; margin-top:4px; font-weight:normal;">(HWPX·엑셀·워드(.docx)는 미리보기 + 근사 변환 병합 가능)</span>
-            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
+            <input type="file" id="fileInput" accept="application/pdf, image/*, .jfif, .jpe, .jfi, .jif, .bmp, .dib, .gif, .avif, image/jpeg, image/png, image/webp, .tif, .tiff, image/tiff, .heic, .heif, image/heic, image/heif, .hwpx, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document, .zip, application/zip, application/x-zip-compressed" multiple onchange="handleFileSelect(event)" />
           </div>
         </div>
       </div>
@@ -1275,10 +1275,55 @@ function handleFileSelect(e) {
   e.target.value = '';
 }
 
+// ============================================================
+// 파일 형식을 확장자/MIME이 아니라 "파일 맨 앞 바이트(매직 넘버)"로 판별한다.
+// (.jfif처럼 file.type이 비는 경우, 확장자가 잘못 붙은 경우 — 예: 실제는 TIFF인데 .jpg —
+//  에도 올바른 방식으로 열기 위함). 결과는 file.__sniff에 저장된다.
+// ============================================================
+const IMAGE_SNIFF_MIME = {
+  jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', bmp: 'image/bmp',
+  webp: 'image/webp', avif: 'image/avif', tiff: 'image/tiff', heic: 'image/heic'
+};
+const IMAGE_SNIFF_TYPES = Object.keys(IMAGE_SNIFF_MIME);
+
+async function sniffFileType(file) {
+  let b;
+  try { b = new Uint8Array(await file.slice(0, 1024).arrayBuffer()); } catch (e) { return null; }
+  if (b.length < 4) return null;
+  const ascii = (s, e) => { let r = ''; for (let i = s; i < e && i < b.length; i++) r += String.fromCharCode(b[i]); return r; };
+  if (b[0] === 0xFF && b[1] === 0xD8) return 'jpeg'; // JPEG (jfif/jpe 포함)
+  if (b[0] === 0x89 && ascii(1, 4) === 'PNG') return 'png';
+  if (ascii(0, 4) === 'GIF8') return 'gif';
+  if (b[0] === 0x42 && b[1] === 0x4D && b.length > 10 && b[6] === 0 && b[7] === 0 && b[8] === 0 && b[9] === 0) return 'bmp';
+  if ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2A && b[3] === 0) ||
+      (b[0] === 0x4D && b[1] === 0x4D && b[2] === 0 && b[3] === 0x2A)) return 'tiff';
+  if (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'webp';
+  if (ascii(4, 8) === 'ftyp') {
+    const brand = ascii(8, 12);
+    if (brand === 'avif' || brand === 'avis') return 'avif';
+    if (['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'].includes(brand)) {
+      return ascii(12, 32).indexOf('avif') !== -1 ? 'avif' : 'heic';
+    }
+  }
+  if (ascii(0, 1024).indexOf('%PDF-') !== -1) return 'pdf';
+  if (b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04) return 'zip'; // zip/hwpx/xlsx/docx
+  return null;
+}
+
+// 실제 형식에 맞는 MIME을 가진 Blob으로 바꿔준다 (확장자/MIME이 틀려도 정상 해석되도록)
+function withImageMime(file) {
+  const m = IMAGE_SNIFF_MIME[file.__sniff];
+  return (m && file.type !== m) ? file.slice(0, file.size, m) : file;
+}
+
 function getFileKind(file) {
+  const sniff = file.__sniff;
+  if (sniff === 'pdf') return 'pdf';
+  if (sniff && IMAGE_SNIFF_TYPES.includes(sniff)) return 'image';
   if (file.type === 'application/pdf') return 'pdf';
   if (file.type.startsWith('image/')) return 'image';
   const ext = file.name.toLowerCase().split('.').pop();
+  if (['jfif', 'jpe', 'jfi', 'jif', 'bmp', 'dib', 'gif', 'avif'].includes(ext)) return 'image'; // file.type이 빈 환경 대비
   if (ext === 'tif' || ext === 'tiff') return 'image'; // 일부 환경은 TIFF의 file.type을 못 채워줌
   if (ext === 'heic' || ext === 'heif') return 'image'; // 아이폰 사진(HEIC/HEIF)도 마찬가지
   if (ext === 'hwpx') return 'hwpx';
@@ -1304,7 +1349,12 @@ function getOutputFileName() {
   return '병합파일.pdf';
 }
 
-function addFiles(files) {
+async function addFiles(files) {
+  const skipped = [];
+  // 확장자·MIME이 아니라 파일 맨 앞 바이트로 실제 형식을 먼저 판별한다
+  for (const file of files) {
+    if (file.__sniff === undefined) file.__sniff = await sniffFileType(file);
+  }
   files.forEach(file => {
     const kind = getFileKind(file);
     if (kind) {
@@ -1314,8 +1364,17 @@ function addFiles(files) {
         pageRange: '',
         rotation: 0
       });
+    } else if (!/\.zip$/i.test(file.name) && file.__sniff !== 'zip') {
+      skipped.push(file.name);
     }
   });
+  if (skipped.length > 0) {
+    const st = document.getElementById('status');
+    if (st) {
+      st.innerText = '⚠️ 지원하지 않는 형식이라 제외됨: ' + skipped.join(', ');
+      st.style.color = '#b45309';
+    }
+  }
   renderFileList();
   if (selectedIndex === null && fileList.length > 0) {
     selectItem(0);
@@ -1497,11 +1556,13 @@ function removeItem(index, e) {
 //   전부 미리보기/병합/변환에서 다 볼 수 있게 된다.
 // ============================================================
 function isTiffFile(file) {
+  if (file.__sniff) return file.__sniff === 'tiff'; // 파일 내용으로 판별된 값이 있으면 그것을 우선
   const ext = (file.name || '').toLowerCase().split('.').pop();
   return ext === 'tif' || ext === 'tiff' || (file.type || '').toLowerCase() === 'image/tiff';
 }
 
 function isHeicFile(file) {
+  if (file.__sniff) return file.__sniff === 'heic';
   const ext = (file.name || '').toLowerCase().split('.').pop();
   return ext === 'heic' || ext === 'heif' || ['image/heic', 'image/heif'].includes((file.type || '').toLowerCase());
 }
@@ -1546,6 +1607,8 @@ async function loadDrawableImage(file) {
   let sourceBlob = file;
   if (isHeicFile(file)) {
     sourceBlob = await convertHeicToJpegBlob(file);
+  } else {
+    sourceBlob = withImageMime(file); // 확장자/MIME이 틀려도 실제 형식에 맞는 MIME으로 읽는다
   }
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1698,9 +1761,9 @@ async function showPreview(itemData) {
         img.style.transform = `rotate(${itemData.rotation}deg)`;
         previewBox.appendChild(img);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(withImageMime(file));
     }
-  } else if (file.type === 'application/pdf') {
+  } else if (kind === 'pdf') {
     try {
       const fileBytes = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({ data: fileBytes });
@@ -2712,7 +2775,7 @@ async function splitPdfByPage() {
      ============================================================ -->
 <script>
 (function () {
-  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff', 'heic', 'heif', 'hwpx', 'xlsx', 'xls', 'docx', 'doc'];
+  const SUPPORTED_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff', 'heic', 'heif', 'jfif', 'jpe', 'jfi', 'jif', 'bmp', 'dib', 'gif', 'avif', 'hwpx', 'xlsx', 'xls', 'docx', 'doc'];
   const LOG_PREFIX = '[ZIP확장]';
 
   // ============================================================
@@ -3049,9 +3112,9 @@ async function splitPdfByPage() {
   }
   if (typeof window.addFiles === 'function') {
     const originalAddFiles = window.addFiles;
-    window.addFiles = function (files) {
+    window.addFiles = async function (files) {
       const before = fileList.length;
-      const result = originalAddFiles.apply(this, arguments);
+      const result = await originalAddFiles.apply(this, arguments);
       for (let i = before; i < fileList.length; i++) detectExcelEncryption(fileList[i]);
       return result;
     };
@@ -3466,6 +3529,14 @@ async function splitPdfByPage() {
       case 'tiff': return 'image/tiff';
       case 'heic': return 'image/heic';
       case 'heif': return 'image/heif';
+      case 'jfif':
+      case 'jpe':
+      case 'jfi':
+      case 'jif': return 'image/jpeg';
+      case 'bmp':
+      case 'dib': return 'image/bmp';
+      case 'gif': return 'image/gif';
+      case 'avif': return 'image/avif';
       case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       case 'xls': return 'application/vnd.ms-excel';
       case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -3981,12 +4052,22 @@ async function splitPdfByPage() {
         continue;
       }
 
-      if (!SUPPORTED_EXTS.includes(ext)) continue; // 원하는 파일만 통과
-
-      const blob = await entry.async('blob');
+      let blob = null;
+      let mimeType = extToMime(ext);
+      if (!SUPPORTED_EXTS.includes(ext)) {
+        // 확장자가 아예 없는 파일만 내용(매직 넘버)으로 PDF/이미지 여부를 확인한다.
+        if (ext !== '') continue;
+        blob = await entry.async('blob');
+        const sniffedType = await sniffFileType(blob);
+        if (sniffedType === 'pdf') mimeType = 'application/pdf';
+        else if (sniffedType && IMAGE_SNIFF_MIME[sniffedType]) mimeType = IMAGE_SNIFF_MIME[sniffedType];
+        else continue;
+      } else {
+        blob = await entry.async('blob');
+      }
       // 폴더 경로 + (zip 내부 자체 하위폴더 경로 포함) 파일명을 그대로 표시명으로 사용
       const displayName = folderPath + entry.name;
-      const file = new File([blob], displayName, { type: extToMime(ext) });
+      const file = new File([blob], displayName, { type: mimeType });
       extracted.push(file);
     }
     extracted.__zipErrors = errorsCollector; // 최상위 호출자가 꺼내 쓸 수 있도록 부착
