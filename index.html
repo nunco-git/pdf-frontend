@@ -945,7 +945,43 @@
     .excel-pw-msg { font-size: 12px; font-weight: 700; flex-basis: 100%; }
     .excel-pw-msg.ok { color: #16a34a; }
     .excel-pw-msg.err { color: #dc2626; }
-  </style>
+  
+/*mobile-fontfix*/
+@media (max-width:640px){
+.security-features li{font-size:15px !important}
+.security-features .feat-icon{font-size:15px !important}
+.security-features strong{font-size:15px !important}
+/* 제목 칸 아래 한글→PDF 변환기 링크 (세로 공간을 아끼기 위해 알약형 버튼 한 줄로 압축) */
+    .title-hwp-link{font-size:14px !important}
+.title-security-badge{font-size:14px !important}
+.main-content.has-active-preview .security-banner-header strong{font-size:15px !important}
+.main-content.has-active-preview .file-select-box strong{font-size:14px !important}
+.badge{font-size:14px !important}
+.badge-approx{font-size:14px !important}
+.file-opt-row{font-size:15px !important}
+.opt-field input, .opt-field select{font-size:15px !important}
+.btn-sm{font-size:15px !important}
+.btn-open{font-size:14px !important}
+.zoom-fit-btn{font-size:14px !important}
+.zoom-label{font-size:14px !important}
+.preview-placeholder{font-size:15px !important}
+/* 원본 페이지 세로:가로 비율 그대로 유지 */
+    .pdf-page-label{font-size:14px !important}
+.pdf-page-loading{font-size:15px !important}
+.pdf-current-page-badge{font-size:15px !important}
+.excel-sheet-tab-btn{font-size:14px !important}
+.excel-preview-table{font-size:14px !important}
+.compress-note{font-size:14px !important}
+.btn-reset{font-size:14px !important}
+.promo-tools-title{font-size:16px !important}
+/* 다운로드 경고창 대처 안내 */
+    .promo-dl-guide{font-size:15px !important}
+.promo-dl-guide-title{font-size:16px !important}
+.promo-dl-guide ol li::before{font-size:14px !important}
+.promo-dl-guide .pdg-tip{font-size:14px !important}
+.excel-pw-msg{font-size:14px !important}
+}
+</style>
 </head>
 <body>
 
@@ -4161,6 +4197,18 @@ async function splitPdfByPage() {
   setTimeout(load, 3000);        // 포털이 방문을 기록한 직후 값을 다시 읽음
   setInterval(load, 60000);
 })();
+</script>
+<script>/*mobile-fontfix-js*/
+(function(){try{if(!window.matchMedia||!matchMedia('(max-width:640px)').matches)return;var MIN=14;
+function fix(root){var list=[];if(root.nodeType!==1)return;list.push(root);var q=root.querySelectorAll('*');for(var i=0;i<q.length;i++)list.push(q[i]);
+for(var j=0;j<list.length;j++){var e=list[j];if(e.__mf||/^(SCRIPT|STYLE|SVG|CANVAS|PATH|G|LINE|RECT|CIRCLE|TEXT|TSPAN)$/i.test(e.tagName))continue;var has=false;for(var n=e.firstChild;n;n=n.nextSibling){if(n.nodeType===3&&n.nodeValue.trim()){has=true;break}}
+if(!has)continue;e.__mf=1;var f=parseFloat(getComputedStyle(e).fontSize);if(f>0&&f<MIN)e.style.setProperty('font-size',MIN+'px','important')}}
+function run(){fix(document.body)}
+var t=null;function later(){clearTimeout(t);t=setTimeout(run,300)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+window.addEventListener('load',run);
+new MutationObserver(later).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+}catch(e){}})();
 </script>
 </body>
 </html>
