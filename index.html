@@ -780,7 +780,7 @@
        안내 문구 + 유용한 프로그램 모음. 파일이 선택되면 showPreview()가
        이 내용을 실제 미리보기로 바로 덮어쓰므로 자연히 사라진다. */
     .preview-empty-promo { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; text-align: center; color: #94a3b8; padding: 8px 10px; box-sizing: border-box; }
-    .promo-tools { flex: 0 0 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; align-content: start; gap: 10px; text-align: left; }
+    .promo-tools { flex: 0 0 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; align-content: start; gap: 8px; text-align: left; }
     @media (max-width: 480px) {
       .promo-tools { grid-template-columns: 1fr; grid-template-rows: none; flex: 0 0 auto; }
       .preview-empty-promo { overflow-y: auto; }
@@ -788,8 +788,8 @@
     .promo-tool-card {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 10px 16px;
+      gap: 12px;
+      padding: 8px 14px;
       min-height: 0;
       overflow: hidden;
       background: #fff;
@@ -802,20 +802,20 @@
     }
     .promo-tool-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(15,23,42,0.14); }
     .promo-tool-icon {
-      font-size: clamp(24px, 3.6vh, 34px);
-      width: clamp(44px, 6.5vh, 58px); height: clamp(44px, 6.5vh, 58px);
+      font-size: 22px;
+      width: 40px; height: 40px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.9);
       box-shadow: 0 1px 4px rgba(0,0,0,0.1);
       flex-shrink: 0;
     }
-    .promo-tool-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .promo-tool-body strong { font-size: clamp(19px, 3vh, 26px); font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
-    .promo-tool-desc { font-size: clamp(14px, 2.1vh, 17px); color: #475569; line-height: 1.4; white-space: normal; }
+    .promo-tool-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+    .promo-tool-body strong { font-size: clamp(15px, 2.2vh, 18px); font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
+    .promo-tool-desc { font-size: clamp(12px, 1.7vh, 14px); color: #475569; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .promo-tool-dl {
       margin-left: auto; flex-shrink: 0;
-      width: 34px; height: 34px; border-radius: 50%;
+      width: 30px; height: 30px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; font-weight: 800;
       background: rgba(255,255,255,0.9); color: #2563eb;
