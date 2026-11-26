@@ -775,12 +775,12 @@
        .empty-msg는 파일을 하나라도 추가하면 renderFileList()가 통째로
        지우고 실제 파일 목록으로 교체하므로, 이 안내도 자연히 함께 사라진다. */
     .empty-msg-text { margin-bottom: 6px; font-size: 16px; }
-    .promo-tools-title { flex: 0 0 auto; margin-bottom: 12px; font-size: 17px; color: #334155; font-weight: 800; letter-spacing: -0.2px; }
+    .promo-tools-title { flex: 0 0 auto; margin-bottom: 10px; font-size: 18px; color: #334155; font-weight: 800; letter-spacing: -0.2px; }
     /* 파일을 아직 선택/드롭하지 않았을 때, 미리보기 창(우측) 안에 보여주는
        안내 문구 + 유용한 프로그램 모음. 파일이 선택되면 showPreview()가
        이 내용을 실제 미리보기로 바로 덮어쓰므로 자연히 사라진다. */
     .preview-empty-promo { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; text-align: center; color: #94a3b8; padding: 8px 10px; box-sizing: border-box; }
-    .promo-tools { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 14px; text-align: left; }
+    .promo-tools { flex: 0 0 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; align-content: start; gap: 10px; text-align: left; }
     @media (max-width: 480px) {
       .promo-tools { grid-template-columns: 1fr; grid-template-rows: none; flex: 0 0 auto; }
       .preview-empty-promo { overflow-y: auto; }
@@ -788,55 +788,55 @@
     .promo-tool-card {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 14px 18px;
+      gap: 14px;
+      padding: 10px 16px;
       min-height: 0;
       overflow: hidden;
       background: #fff;
       border: 2px solid #e2e8f0;
-      border-radius: 16px;
+      border-radius: 14px;
       text-decoration: none;
       color: inherit;
-      box-shadow: 0 2px 6px rgba(15,23,42,0.06);
-      transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s, filter 0.15s;
+      box-shadow: 0 2px 6px rgba(15,23,42,0.05);
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
     }
-    .promo-tool-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(15,23,42,0.18); filter: brightness(1.04); }
+    .promo-tool-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(15,23,42,0.14); }
     .promo-tool-icon {
-      font-size: clamp(28px, 4.4vh, 40px);
-      width: clamp(52px, 8vh, 72px); height: clamp(52px, 8vh, 72px);
+      font-size: clamp(24px, 3.6vh, 34px);
+      width: clamp(44px, 6.5vh, 58px); height: clamp(44px, 6.5vh, 58px);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,0.85);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
       flex-shrink: 0;
     }
-    .promo-tool-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-    .promo-tool-body strong { font-size: clamp(17px, 2.7vh, 23px); font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
-    .promo-tool-desc { font-size: clamp(12.5px, 1.8vh, 15px); color: #475569; line-height: 1.45; white-space: normal; }
+    .promo-tool-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .promo-tool-body strong { font-size: clamp(19px, 3vh, 26px); font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
+    .promo-tool-desc { font-size: clamp(14px, 2.1vh, 17px); color: #475569; line-height: 1.4; white-space: normal; }
     .promo-tool-dl {
       margin-left: auto; flex-shrink: 0;
-      width: 38px; height: 38px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800;
+      font-size: 16px; font-weight: 800;
       background: rgba(255,255,255,0.9); color: #2563eb;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
     }
-    /* 색상별 카드: 스마트탐색기(파랑)·PDF Editor(빨강/주황)는 꽉 찬 색으로 강조 */
-    .promo-c-blue { background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); border-color: #1d4ed8; box-shadow: 0 6px 16px rgba(37,99,235,0.35); }
-    .promo-c-blue .promo-tool-body strong { color: #fff; }
-    .promo-c-blue .promo-tool-desc { color: rgba(255,255,255,0.92); }
+    /* 연한 색상 카드 */
+    .promo-c-blue { background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%); border-color: #93c5fd; }
+    .promo-c-blue .promo-tool-body strong { color: #1e40af; }
+    .promo-c-blue .promo-tool-desc { color: #334155; }
     .promo-c-blue .promo-tool-dl { color: #2563eb; }
-    .promo-c-red { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); border-color: #dc2626; box-shadow: 0 6px 16px rgba(239,68,68,0.35); }
-    .promo-c-red .promo-tool-body strong { color: #fff; }
-    .promo-c-red .promo-tool-desc { color: rgba(255,255,255,0.95); }
-    .promo-c-red .promo-tool-dl { color: #dc2626; }
-    .promo-c-green { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-color: #34d399; }
-    .promo-c-green .promo-tool-body strong { color: #065f46; }
-    .promo-c-green .promo-tool-desc { color: #047857; }
-    .promo-c-green .promo-tool-dl { color: #059669; }
-    .promo-c-purple { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-color: #a78bfa; }
-    .promo-c-purple .promo-tool-body strong { color: #5b21b6; }
-    .promo-c-purple .promo-tool-desc { color: #6d28d9; }
+    .promo-c-red { background: linear-gradient(135deg, #ffe4e6 0%, #ffedd5 100%); border-color: #fda4af; }
+    .promo-c-red .promo-tool-body strong { color: #be123c; }
+    .promo-c-red .promo-tool-desc { color: #334155; }
+    .promo-c-red .promo-tool-dl { color: #e11d48; }
+    .promo-c-green { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-color: #86efac; }
+    .promo-c-green .promo-tool-body strong { color: #166534; }
+    .promo-c-green .promo-tool-desc { color: #334155; }
+    .promo-c-green .promo-tool-dl { color: #16a34a; }
+    .promo-c-purple { background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%); border-color: #c4b5fd; }
+    .promo-c-purple .promo-tool-body strong { color: #6d28d9; }
+    .promo-c-purple .promo-tool-desc { color: #334155; }
     .promo-c-purple .promo-tool-dl { color: #7c3aed; }
     /* 프로그램 다운로드 전 안내 팝업 */
     .promo-confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
